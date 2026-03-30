@@ -140,7 +140,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useDailyTaskStore } from '../stores/dailyTaskStore'
 import { useTaskStore } from '../stores/taskStore'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import DailyTaskModal from '../components/daily/DailyTaskModal.vue'
+
+dayjs.locale('zh-cn')
 
 const dailyTaskStore = useDailyTaskStore()
 const taskStore = useTaskStore()

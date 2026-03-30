@@ -2,6 +2,12 @@ import CryptoJS from 'crypto-js'
 
 const ENCRYPTION_KEY = 'TaskManagerSecretKey2024'
 
+export function toPlainObject(obj) {
+  if (obj === null || obj === undefined) return obj
+  if (typeof obj !== 'object') return obj
+  return JSON.parse(JSON.stringify(obj))
+}
+
 export function encrypt(data) {
   const jsonString = JSON.stringify(data)
   const encrypted = CryptoJS.AES.encrypt(jsonString, ENCRYPTION_KEY).toString()

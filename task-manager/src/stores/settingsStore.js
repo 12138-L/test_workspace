@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getAllItems, addItem, updateItem, STORES } from '../utils/database'
+import { toPlainObject } from '../utils/encryption'
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref({
@@ -34,7 +35,7 @@ export const useSettingsStore = defineStore('settings', () => {
     
     settings.value[key] = value
     
-    await updateItem(STORES.SETTINGS, { key, value })
+    await updateItem(STORES.SETTINGS, { key, value: toPlainObject(value) })
     return true
   }
 

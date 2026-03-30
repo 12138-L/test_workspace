@@ -152,6 +152,9 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { exportBackup, importBackup, downloadBackup, readBackupFile, validateBackup } from '../utils/backup'
 import { clearStore, STORES } from '../utils/database'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+
+dayjs.locale('zh-cn')
 
 const settingsStore = useSettingsStore()
 

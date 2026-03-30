@@ -55,43 +55,83 @@ export async function getDB() {
 
 export async function addItem(storeName, item) {
   const db = await getDB()
-  return await db.add(storeName, item)
+  try {
+    return await db.add(storeName, item)
+  } catch (error) {
+    console.error(`Failed to add item to ${storeName}:`, error)
+    throw error
+  }
 }
 
 export async function updateItem(storeName, item) {
   const db = await getDB()
-  return await db.put(storeName, item)
+  try {
+    return await db.put(storeName, item)
+  } catch (error) {
+    console.error(`Failed to update item in ${storeName}:`, error)
+    throw error
+  }
 }
 
 export async function getItem(storeName, id) {
   const db = await getDB()
-  return await db.get(storeName, id)
+  try {
+    return await db.get(storeName, id)
+  } catch (error) {
+    console.error(`Failed to get item from ${storeName}:`, error)
+    return null
+  }
 }
 
 export async function getAllItems(storeName) {
   const db = await getDB()
-  return await db.getAll(storeName)
+  try {
+    return await db.getAll(storeName)
+  } catch (error) {
+    console.error(`Failed to get all items from ${storeName}:`, error)
+    return []
+  }
 }
 
 export async function deleteItem(storeName, id) {
   const db = await getDB()
-  return await db.delete(storeName, id)
+  try {
+    return await db.delete(storeName, id)
+  } catch (error) {
+    console.error(`Failed to delete item from ${storeName}:`, error)
+    throw error
+  }
 }
 
 export async function clearStore(storeName) {
   const db = await getDB()
-  return await db.clear(storeName)
+  try {
+    return await db.clear(storeName)
+  } catch (error) {
+    console.error(`Failed to clear store ${storeName}:`, error)
+    throw error
+  }
 }
 
 export async function getItemsByIndex(storeName, indexName, value) {
   const db = await getDB()
-  return await db.getAllFromIndex(storeName, indexName, value)
+  try {
+    return await db.getAllFromIndex(storeName, indexName, value)
+  } catch (error) {
+    console.error(`Failed to get items by index from ${storeName}:`, error)
+    return []
+  }
 }
 
 export async function getItemsByDateRange(storeName, indexName, start, end) {
   const db = await getDB()
-  const range = IDBKeyRange.bound(start, end)
-  return await db.getAllFromIndex(storeName, indexName, range)
+  try {
+    const range = IDBKeyRange.bound(start, end)
+    return await db.getAllFromIndex(storeName, indexName, range)
+  } catch (error) {
+    console.error(`Failed to get items by date range from ${storeName}:`, error)
+    return []
+  }
 }
 
 export { STORES }

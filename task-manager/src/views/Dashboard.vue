@@ -106,8 +106,13 @@
 import { ref, computed } from 'vue'
 import { useTaskStore } from '../stores/taskStore'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import weekday from 'dayjs/plugin/weekday'
 import TaskItem from '../components/tasks/TaskItem.vue'
 import TaskModal from '../components/tasks/TaskModal.vue'
+
+dayjs.extend(weekday)
+dayjs.locale('zh-cn')
 
 const taskStore = useTaskStore()
 

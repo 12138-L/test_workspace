@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getAllItems, addItem, updateItem, deleteItem, getItemsByIndex, STORES } from '../utils/database'
-import { generateId } from '../utils/encryption'
+import { generateId, toPlainObject } from '../utils/encryption'
 import dayjs from 'dayjs'
 import { Solar, Lunar } from 'lunar-javascript'
 
@@ -101,7 +101,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     const event = {
       id: generateId(),
       type: 'event',
-      ...eventData,
+      title: eventData.title,
+      date: eventData.date,
+      time: eventData.time || '',
+      description: eventData.description || '',
+      color: eventData.color || '#4F46E5',
+      reminder: toPlainObject(eventData.reminder) || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -115,11 +120,13 @@ export const useCalendarStore = defineStore('calendar', () => {
     const index = events.value.findIndex(e => e.id === id)
     if (index === -1) return null
     
-    const updatedEvent = {
+    const cleanUpdates = toPlainObject(updates)
+    
+    const updatedEvent = toPlainObject({
       ...events.value[index],
-      ...updates,
+      ...cleanUpdates,
       updatedAt: new Date().toISOString()
-    }
+    })
     
     await updateItem(STORES.CALENDAR, updatedEvent)
     events.value[index] = updatedEvent
@@ -135,7 +142,9 @@ export const useCalendarStore = defineStore('calendar', () => {
     const memo = {
       id: generateId(),
       type: 'memo',
-      ...memoData,
+      date: memoData.date,
+      content: memoData.content,
+      color: memoData.color || '#4F46E5',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -149,11 +158,13 @@ export const useCalendarStore = defineStore('calendar', () => {
     const index = memos.value.findIndex(m => m.id === id)
     if (index === -1) return null
     
-    const updatedMemo = {
+    const cleanUpdates = toPlainObject(updates)
+    
+    const updatedMemo = toPlainObject({
       ...memos.value[index],
-      ...updates,
+      ...cleanUpdates,
       updatedAt: new Date().toISOString()
-    }
+    })
     
     await updateItem(STORES.CALENDAR, updatedMemo)
     memos.value[index] = updatedMemo

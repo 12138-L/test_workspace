@@ -105,7 +105,10 @@ import { ref, computed } from 'vue'
 import { useCalendarStore } from '../stores/calendarStore'
 import { useTaskStore } from '../stores/taskStore'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import EventModal from '../components/calendar/EventModal.vue'
+
+dayjs.locale('zh-cn')
 
 const calendarStore = useCalendarStore()
 const taskStore = useTaskStore()

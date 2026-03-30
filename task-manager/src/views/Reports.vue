@@ -146,7 +146,10 @@
 import { ref, computed } from 'vue'
 import { useTaskStore } from '../stores/taskStore'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import { exportToCSV, exportToPDF } from '../utils/reportExport'
+
+dayjs.locale('zh-cn')
 
 const taskStore = useTaskStore()
 

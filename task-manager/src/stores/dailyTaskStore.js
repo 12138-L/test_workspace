@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getAllItems, addItem, updateItem, deleteItem, STORES } from '../utils/database'
-import { generateId } from '../utils/encryption'
+import { generateId, toPlainObject } from '../utils/encryption'
 import dayjs from 'dayjs'
 
 export const useDailyTaskStore = defineStore('dailyTask', () => {
@@ -46,7 +46,10 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
     const template = {
       id: generateId(),
       isTemplate: true,
-      ...templateData,
+      title: templateData.title,
+      type: templateData.type || 'work',
+      priority: templateData.priority || 'medium',
+      reminder: toPlainObject(templateData.reminder) || null,
       createdAt: new Date().toISOString()
     }
     
@@ -59,10 +62,12 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
     const index = templates.value.findIndex(t => t.id === id)
     if (index === -1) return null
     
-    const updatedTemplate = {
+    const cleanUpdates = toPlainObject(updates)
+    
+    const updatedTemplate = toPlainObject({
       ...templates.value[index],
-      ...updates
-    }
+      ...cleanUpdates
+    })
     
     await updateItem(STORES.DAILY_TASKS, updatedTemplate)
     templates.value[index] = updatedTemplate
@@ -82,7 +87,7 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
       title: template.title,
       type: template.type,
       priority: template.priority,
-      reminder: template.reminder,
+      reminder: toPlainObject(template.reminder) || null,
       completed: false,
       completedAt: null,
       createdAt: new Date().toISOString()
@@ -97,11 +102,11 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
     const index = templates.value.findIndex(t => t.id === id)
     if (index === -1) return null
     
-    const updatedTask = {
+    const updatedTask = toPlainObject({
       ...templates.value[index],
       completed: true,
       completedAt: new Date().toISOString()
-    }
+    })
     
     await updateItem(STORES.DAILY_TASKS, updatedTask)
     templates.value[index] = updatedTask
@@ -112,11 +117,11 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
     const index = templates.value.findIndex(t => t.id === id)
     if (index === -1) return null
     
-    const updatedTask = {
+    const updatedTask = toPlainObject({
       ...templates.value[index],
       completed: false,
       completedAt: null
-    }
+    })
     
     await updateItem(STORES.DAILY_TASKS, updatedTask)
     templates.value[index] = updatedTask
@@ -127,10 +132,10 @@ export const useDailyTaskStore = defineStore('dailyTask', () => {
     const index = templates.value.findIndex(t => t.id === id)
     if (index === -1) return null
     
-    const updatedTask = {
+    const updatedTask = toPlainObject({
       ...templates.value[index],
       date: newDate
-    }
+    })
     
     await updateItem(STORES.DAILY_TASKS, updatedTask)
     templates.value[index] = updatedTask

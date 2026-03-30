@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getAllItems, addItem, updateItem, deleteItem, getItemsByIndex, getItemsByDateRange, STORES } from '../utils/database'
-import { generateId } from '../utils/encryption'
+import { generateId, toPlainObject } from '../utils/encryption'
 import dayjs from 'dayjs'
 
 export const useTaskStore = defineStore('task', () => {
@@ -73,10 +73,16 @@ export const useTaskStore = defineStore('task', () => {
   async function addTask(taskData) {
     const task = {
       id: generateId(),
-      ...taskData,
+      title: taskData.title,
+      description: taskData.description || '',
+      type: taskData.type,
+      priority: taskData.priority,
+      dueDate: taskData.dueDate,
+      dueTime: taskData.dueTime || '',
+      progress: taskData.progress || 0,
+      stages: toPlainObject(taskData.stages) || [],
+      reminder: toPlainObject(taskData.reminder) || { enabled: false, time: '30' },
       status: 'pending',
-      progress: 0,
-      stages: taskData.stages || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       startedAt: null,
@@ -92,17 +98,19 @@ export const useTaskStore = defineStore('task', () => {
     const index = tasks.value.findIndex(t => t.id === id)
     if (index === -1) return null
     
-    const updatedTask = {
-      ...tasks.value[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    }
+    const cleanUpdates = toPlainObject(updates)
     
-    if (updates.status === 'in_progress' && !tasks.value[index].startedAt) {
+    const updatedTask = toPlainObject({
+      ...tasks.value[index],
+      ...cleanUpdates,
+      updatedAt: new Date().toISOString()
+    })
+    
+    if (cleanUpdates.status === 'in_progress' && !tasks.value[index].startedAt) {
       updatedTask.startedAt = new Date().toISOString()
     }
     
-    if (updates.status === 'completed') {
+    if (cleanUpdates.status === 'completed') {
       updatedTask.completedAt = new Date().toISOString()
       updatedTask.progress = 100
     }
