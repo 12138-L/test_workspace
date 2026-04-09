@@ -1,0 +1,44 @@
+{
+  "name": "teamflowmanager",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "typecheck": "vue-tsc --noEmit",
+    "format": "prettier --write src/",
+    "prepare": "simple-git-hooks"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@vueuse/core": "^10.7.0",
+    "element-plus": "^2.4.4",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.1",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@iconify-json/ep": "^1.1.4",
+    "@types/node": "^20.8.10",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/eslint-config-prettier": "^9.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.52.0",
+    "eslint-plugin-vue": "^9.19.0",
+    "postcss": "^8.4.31",
+    "prettier": "^3.0.3",
+    "simple-git-hooks": "^2.9.0",
+    "tailwindcss": "^3.3.5",
+    "unplugin-auto-import": "^0.17.4",
+    "unplugin-element-plus": "^0.11.0",
+    "unplugin-vue-components": "^0.25.2",
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^0.17.0",
+    "vue-tsc": "^2.0.0"
+  }
+}
