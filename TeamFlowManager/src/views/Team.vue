@@ -19,6 +19,10 @@
           :pagination="pagination"
           virtual-scroll
           :max-height="500"
+          :row-properties="(row: TeamMember) => ({
+            style: 'cursor: pointer',
+            onClick: () => handleEdit(row)
+          })"
         >
           <template #empty>
             <DataTableEmpty
@@ -57,8 +61,8 @@
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSubmit">确定</n-button>
+          <n-button @click="showModal = false" :disabled="submitting">取消</n-button>
+          <n-button type="primary" @click="handleSubmit" :loading="submitting">确定</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -97,12 +101,27 @@ const statusOptions = [
 
 const showModal = ref(false)
 const editingMember = ref<TeamMember | null>(null)
-const formData = ref({
+const submitting = ref(false)
+
+const defaultFormData = {
   name: '',
   role: '',
   email: '',
   department: '技术部',
   status: 'active' as TeamMember['status']
+}
+
+const formData = ref({ ...defaultFormData })
+
+function resetForm() {
+  editingMember.value = null
+  formData.value = { ...defaultFormData }
+}
+
+watch(showModal, (open) => {
+  if (!open) {
+    resetForm()
+  }
 })
 
 const columns: DataTableColumns<TeamMember> = [
@@ -154,14 +173,7 @@ onMounted(() => {
 })
 
 function handleAddMember() {
-  editingMember.value = null
-  formData.value = {
-    name: '',
-    role: '',
-    email: '',
-    department: '技术部',
-    status: 'active'
-  }
+  resetForm()
   showModal.value = true
 }
 
@@ -185,20 +197,35 @@ function handleDelete(member: TeamMember) {
 }
 
 async function handleSubmit() {
-  if (!formData.value.name.trim()) {
+  if (submitting.value) return
+
+  const name = formData.value.name?.trim()
+  if (!name) {
     message.warning('请输入姓名')
     return
   }
 
-  if (editingMember.value) {
-    await teamStore.updateMember(editingMember.value.id, formData.value)
-    message.success('成员信息已更新')
-  } else {
-    await teamStore.addMember(formData.value)
-    message.success('成员添加成功')
-  }
+  submitting.value = true
+  try {
+    const submitData = {
+      ...formData.value,
+      name,
+      role: formData.value.role?.trim() || '',
+      email: formData.value.email?.trim() || ''
+    }
 
-  showModal.value = false
+    if (editingMember.value) {
+      await teamStore.updateMember(editingMember.value.id, submitData)
+      message.success('成员信息已更新')
+    } else {
+      await teamStore.addMember(submitData)
+      message.success('成员添加成功')
+    }
+
+    showModal.value = false
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 

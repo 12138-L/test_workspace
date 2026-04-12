@@ -20,6 +20,10 @@
           striped
           virtual-scroll
           :max-height="500"
+          :row-properties="(row: Project) => ({
+            style: 'cursor: pointer',
+            onClick: () => handleEdit(row)
+          })"
         >
           <template #empty>
             <DataTableEmpty
@@ -58,8 +62,8 @@
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSubmit">确定</n-button>
+          <n-button @click="showModal = false" :disabled="submitting">取消</n-button>
+          <n-button type="primary" @click="handleSubmit" :loading="submitting">确定</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -89,13 +93,28 @@ const pagination = {
 
 const showModal = ref(false)
 const editingProject = ref<Project | null>(null)
-const formData = ref({
+const submitting = ref(false)
+
+const defaultFormData = {
   name: '',
   manager: '',
   status: '进行中' as Project['status'],
   progress: 0,
-  startDate: '',
+  startDate: new Date().toISOString().slice(0, 10),
   endDate: ''
+}
+
+const formData = ref({ ...defaultFormData })
+
+function resetForm() {
+  editingProject.value = null
+  formData.value = { ...defaultFormData }
+}
+
+watch(showModal, (open) => {
+  if (!open) {
+    resetForm()
+  }
 })
 
 const statusOptions = [
@@ -157,15 +176,7 @@ const columns: DataTableColumns<Project> = [
 ]
 
 function handleCreateProject() {
-  editingProject.value = null
-  formData.value = {
-    name: '',
-    manager: '',
-    status: '进行中',
-    progress: 0,
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: ''
-  }
+  resetForm()
   showModal.value = true
 }
 
@@ -189,20 +200,34 @@ function handleDelete(project: Project) {
 }
 
 async function handleSubmit() {
-  if (!formData.value.name.trim()) {
+  if (submitting.value) return
+
+  const name = formData.value.name?.trim()
+  if (!name) {
     message.warning('请输入项目名称')
     return
   }
 
-  if (editingProject.value) {
-    await projectsStore.updateProject(editingProject.value.id, formData.value)
-    message.success('项目已更新')
-  } else {
-    await projectsStore.addProject(formData.value)
-    message.success('项目创建成功')
-  }
+  submitting.value = true
+  try {
+    const submitData = {
+      ...formData.value,
+      name,
+      manager: formData.value.manager?.trim() || ''
+    }
 
-  showModal.value = false
+    if (editingProject.value) {
+      await projectsStore.updateProject(editingProject.value.id, submitData)
+      message.success('项目已更新')
+    } else {
+      await projectsStore.addProject(submitData)
+      message.success('项目创建成功')
+    }
+
+    showModal.value = false
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
