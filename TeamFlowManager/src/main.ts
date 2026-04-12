@@ -6,7 +6,7 @@ import './styles/tailwind.css'
 import './styles/icons.css'
 import { setupNaiveDiscreteApi } from './utils/naive'
 import { initDatabase } from './db'
-import { useUserStore, useSettingsStore, useAppStore } from './stores'
+import { useUserStore, useSettingsStore, useAppStore, useProjectsStore, useTasksStore, useTeamStore } from './stores'
 
 async function bootstrap() {
   const app = createApp(App)
@@ -21,11 +21,17 @@ async function bootstrap() {
     const userStore = useUserStore()
     const settingsStore = useSettingsStore()
     const appStore = useAppStore()
+    const projectsStore = useProjectsStore()
+    const tasksStore = useTasksStore()
+    const teamStore = useTeamStore()
 
     await Promise.all([
       userStore.loadFromStorage(),
       settingsStore.loadFromStorage(),
-      appStore.loadFromStorage()
+      appStore.loadFromStorage(),
+      projectsStore.fetchProjects(),
+      tasksStore.fetchTasks(),
+      teamStore.fetchTeam()
     ])
   } catch (e) {
     console.warn('DB init failed, using fallback:', e)

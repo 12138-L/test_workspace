@@ -3,8 +3,12 @@
     <n-page-header title="任务管理" subtitle="管理所有团队任务">
       <template #extra>
         <n-space>
+          <n-radio-group v-model:value="viewMode" size="small">
+            <n-radio-button value="list">列表</n-radio-button>
+            <n-radio-button value="kanban">看板</n-radio-button>
+          </n-radio-group>
           <n-select
-            v-model:value="statusFilter"
+            v-model:value="tasksStore.statusFilter"
             :options="filterOptions"
             placeholder="筛选状态"
             style="width: 120px"
@@ -21,29 +25,31 @@
     </n-page-header>
 
     <n-card style="margin-top: 20px">
-        <template #header>
-          <div class="card-header">
-            <span>任务列表</span>
-            <n-input
-              v-model:value="tasksStore.searchKeyword"
-              placeholder="搜索任务"
-              style="width: 240px"
-              clearable
-              @update:value="handleSearch"
-            >
-              <template #prefix>🔍</template>
-            </n-input>
-          </div>
-        </template>
+      <template #header v-if="viewMode === 'list'">
+        <div class="card-header">
+          <span>任务列表</span>
+          <n-input
+            v-model:value="tasksStore.searchKeyword"
+            placeholder="搜索任务"
+            style="width: 240px"
+            clearable
+          >
+            <template #prefix>
+              <span v-html="Icons.search" class="icon-btn"></span>
+            </template>
+          </n-input>
+        </div>
+      </template>
 
-        <n-spin :show="tasksStore.loading" description="加载中...">
+      <n-spin :show="tasksStore.loading" description="加载中...">
+        <div v-if="viewMode === 'list'">
           <n-data-table
             :columns="columns"
             :data="tasksStore.filteredTasks"
             :pagination="pagination"
             striped
             virtual-scroll
-            :max-height="500"
+            :max-height="550"
           >
             <template #empty>
               <DataTableEmpty
@@ -54,13 +60,29 @@
               />
             </template>
           </n-data-table>
-        </n-spin>
+        </div>
+
+        <div v-else class="kanban-wrapper">
+          <KanbanBoard
+            :tasks="tasksStore.filteredTasks"
+            @task-click="handleEdit"
+            @task-delete="handleDelete"
+            @status-change="handleStatusChange"
+          />
+        </div>
+      </n-spin>
     </n-card>
 
     <n-modal v-model:show="showModal" preset="card" :title="editingTask ? '编辑任务' : '新建任务'" style="width: 500px">
       <n-form :model="formData" label-placement="left" label-width="100">
         <n-form-item label="任务标题" required>
           <n-input v-model:value="formData.title" placeholder="请输入任务标题" />
+        </n-form-item>
+        <n-form-item label="任务内容">
+          <n-input v-model:value="formData.description" type="textarea" :rows="3" placeholder="请输入任务详情描述" />
+        </n-form-item>
+        <n-form-item label="备注">
+          <n-input v-model:value="formData.remark" type="textarea" :rows="2" placeholder="添加备注信息" />
         </n-form-item>
         <n-form-item label="负责人">
           <n-input v-model:value="formData.assignee" placeholder="请输入负责人" />
@@ -71,8 +93,11 @@
         <n-form-item label="状态">
           <n-select v-model:value="formData.status" :options="statusOptions" />
         </n-form-item>
+        <n-form-item label="开始日期">
+          <n-date-picker v-model:value="formData.startTime as any" type="date" format="yyyy-MM-dd" value-format="timestamp" style="width: 100%" />
+        </n-form-item>
         <n-form-item label="截止日期">
-          <n-date-picker v-model:value="formData.dueDate as any" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="width: 100%" />
+          <n-date-picker v-model:value="formData.dueDate as any" type="date" format="yyyy-MM-dd" value-format="timestamp" style="width: 100%" />
         </n-form-item>
       </n-form>
 
@@ -88,7 +113,7 @@
 
 <script setup lang="ts">
 import type { DataTableColumns, SelectOption } from 'naive-ui'
-import { h, ref, onMounted, watch } from 'vue'
+import { h, ref, onMounted } from 'vue'
 import { message, dialog } from '@/utils/naive'
 import type { Task } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
@@ -96,19 +121,23 @@ import { getStatusType, getPriorityType } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
 import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
+import KanbanBoard from '@/components/KanbanBoard.vue'
 
 const tasksStore = useTasksStore()
-const loading = ref(false)
-const statusFilter = ref<string | null>(null)
+
+const viewMode = ref<'list' | 'kanban'>('kanban')
 const showModal = ref(false)
 const editingTask = ref<Task | null>(null)
 
 const formData = ref({
   title: '',
+  description: '',
+  remark: '',
   assignee: '',
   priority: '中' as Task['priority'],
   status: '待开始' as Task['status'],
-  dueDate: ''
+  startTime: null as number | null,
+  dueDate: null as number | null
 })
 
 const pagination = {
@@ -122,55 +151,72 @@ const filterOptions: SelectOption[] = [
   { label: '已延期', value: '已延期' }
 ]
 
-const priorityOptions: SelectOption[] = [
-  { label: '高', value: '高' },
-  { label: '中', value: '中' },
-  { label: '低', value: '低' }
-]
-
-const statusOptions: SelectOption[] = [
+const statusOptions = [
   { label: '待开始', value: '待开始' },
   { label: '进行中', value: '进行中' },
   { label: '已完成', value: '已完成' },
   { label: '已延期', value: '已延期' }
 ]
 
+const priorityOptions = [
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' }
+]
+
 const columns: DataTableColumns<Task> = [
   {
-    title: '任务标题',
-    key: 'title'
+    title: '任务信息',
+    key: 'title',
+    width: 280,
+    render: (row: Task) =>
+      h('div', { class: 'task-info-cell' }, [
+        h('div', { class: 'task-title' }, row.title),
+        row.description
+          ? h('div', { class: 'task-desc' }, row.description)
+          : null
+      ])
   },
   {
     title: '负责人',
     key: 'assignee',
-    width: 120
+    width: 90
   },
   {
     title: '优先级',
     key: 'priority',
-    width: 100,
+    width: 80,
     render: (row: Task) =>
-      h(
-        'n-tag',
-        { type: getPriorityType(String(row.priority)), size: 'small' },
-        { default: () => row.priority }
-      )
+      h('n-tag', { type: getPriorityType(row.priority), size: 'small' }, { default: () => row.priority })
   },
   {
     title: '状态',
     key: 'status',
-    width: 120,
+    width: 90,
     render: (row: Task) =>
-      h(
-        'n-tag',
-        { type: getStatusType(String(row.status)), size: 'small' },
-        { default: () => row.status }
-      )
+      h('n-tag', { type: getStatusType(row.status), size: 'small' }, { default: () => row.status })
   },
   {
-    title: '截止日期',
+    title: '开始',
+    key: 'startTime',
+    width: 100
+  },
+  {
+    title: '截止',
     key: 'dueDate',
-    width: 120
+    width: 100
+  },
+  {
+    title: '备注',
+    key: 'remark',
+    width: 120,
+    render: (row: Task) =>
+      row.remark
+        ? h('n-tooltip', { trigger: 'hover', placement: 'top' }, {
+            default: () => row.remark,
+            trigger: () => h('span', { class: 'remark-text' }, row.remark.slice(0, 12) + (row.remark.length > 12 ? '...' : ''))
+          })
+        : h('span', { class: 'empty-text' }, '-')
   },
   {
     title: '操作',
@@ -185,76 +231,95 @@ const columns: DataTableColumns<Task> = [
   }
 ]
 
-onMounted(() => {
-  fetchTasks()
-})
-
-watch(statusFilter, () => {
-  tasksStore.setStatusFilter(statusFilter.value)
-})
-
-const fetchTasks = async () => {
-  loading.value = true
-  try {
-    await tasksStore.fetchTasks()
-  } catch (error) {
-    message.error('加载任务失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = (value: string) => {
-  tasksStore.setSearchKeyword(value)
-}
-
-const handleCreateTask = () => {
+function handleCreateTask() {
   editingTask.value = null
   formData.value = {
     title: '',
+    description: '',
+    remark: '',
     assignee: '',
-    priority: '中',
-    status: '待开始',
-    dueDate: new Date().toISOString().slice(0, 10)
+    priority: '中' as Task['priority'],
+    status: '待开始' as Task['status'],
+    startTime: null as number | null,
+    dueDate: null as number | null
   }
   showModal.value = true
 }
 
-const handleEdit = (task: Task) => {
+function parseDateString(dateStr: string): number | null {
+  if (!dateStr) return null
+  const date = new Date(dateStr)
+  return isNaN(date.getTime()) ? null : date.getTime()
+}
+
+function formatTimestamp(timestamp: number | null): string {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function handleEdit(task: Task) {
   editingTask.value = task
-  formData.value = { ...task }
+  formData.value = {
+    title: task.title,
+    description: task.description || '',
+    remark: task.remark || '',
+    assignee: task.assignee,
+    priority: task.priority,
+    status: task.status,
+    startTime: parseDateString(task.startTime),
+    dueDate: parseDateString(task.dueDate)
+  }
   showModal.value = true
 }
 
-const handleDelete = (task: Task) => {
+function handleDelete(task: Task) {
   dialog.warning({
     title: '确认删除',
-    content: `确定要删除任务「${task.title}」吗？此操作不可恢复。`,
+    content: `确定要删除任务「${task.title}」吗？`,
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
       await tasksStore.deleteTask(task.id)
-      message.success(`任务「${task.title}」已删除`)
+      message.success('已删除')
     }
   })
 }
 
-const handleSubmit = async () => {
+async function handleStatusChange(taskId: number, newStatus: Task['status']) {
+  await tasksStore.updateTask(taskId, { status: newStatus })
+  message.success('任务状态已更新')
+}
+
+async function handleSubmit() {
   if (!formData.value.title.trim()) {
     message.warning('请输入任务标题')
     return
   }
 
+  const submitData = {
+    ...formData.value,
+    startTime: formatTimestamp(formData.value.startTime as number | null),
+    dueDate: formatTimestamp(formData.value.dueDate as number | null)
+  }
+
   if (editingTask.value) {
-    await tasksStore.updateTask(editingTask.value.id, formData.value)
+    await tasksStore.updateTask(editingTask.value.id, submitData)
     message.success('任务已更新')
   } else {
-    await tasksStore.addTask(formData.value)
+    await tasksStore.addTask(submitData)
     message.success('任务创建成功')
   }
 
   showModal.value = false
 }
+
+onMounted(() => {
+  tasksStore.fetchTasks()
+})
 </script>
 
 <style scoped>
@@ -264,8 +329,38 @@ const handleSubmit = async () => {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  justify-content: space-between;
+}
+
+.kanban-wrapper {
+  padding: 8px 0;
+}
+
+.task-info-cell {
+  line-height: 1.4;
+}
+
+.task-info-cell .task-title {
+  font-weight: 500;
+  color: #1d2129;
+  margin-bottom: 2px;
+}
+
+.task-info-cell .task-desc {
+  font-size: 12px;
+  color: #86909c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remark-text {
+  cursor: help;
+  color: #4e5969;
+}
+
+.empty-text {
+  color: #c9cdd4;
 }
 </style>

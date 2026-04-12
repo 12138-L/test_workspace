@@ -13,39 +13,92 @@ export interface IRepository<T, K = number> {
   count(): Promise<number>
 }
 
+function toPlainObject<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+function safeSerialize<T>(obj: T): T {
+  try {
+    return toPlainObject(obj)
+  } catch (e) {
+    console.warn('[Dexie] Serialization fallback, some data may be lost:', e)
+    return { ...obj } as T
+  }
+}
+
 export class DexieRepository<T, K = number> implements IRepository<T, K> {
   constructor(protected table: Table<T, K>) {}
 
   async getAll(): Promise<T[]> {
-    return this.table.toArray()
+    try {
+      return this.table.toArray()
+    } catch (e) {
+      console.error('[Dexie] getAll error:', e)
+      return []
+    }
   }
 
   async getById(id: K): Promise<T | undefined> {
-    return this.table.get(id)
+    try {
+      return this.table.get(id)
+    } catch (e) {
+      console.error('[Dexie] getById error:', e)
+      return undefined
+    }
   }
 
   async create(item: Omit<T, 'id'>): Promise<K> {
-    return this.table.add(item as T) as Promise<K>
+    try {
+      return this.table.add(safeSerialize(item) as T) as Promise<K>
+    } catch (e) {
+      console.error('[Dexie] create error:', e)
+      throw e
+    }
   }
 
   async update(id: K, changes: Partial<T>): Promise<number> {
-    return this.table.update(id, changes as any)
+    try {
+      return this.table.update(id, safeSerialize(changes) as any)
+    } catch (e) {
+      console.error('[Dexie] update error:', e)
+      throw e
+    }
   }
 
   async delete(id: K): Promise<void> {
-    await this.table.delete(id)
+    try {
+      await this.table.delete(id)
+    } catch (e) {
+      console.error('[Dexie] delete error:', e)
+      throw e
+    }
   }
 
   async bulkCreate(items: Array<Omit<T, 'id'>>): Promise<K[]> {
-    return this.table.bulkAdd(items as T[], { allKeys: true }) as Promise<K[]>
+    try {
+      return this.table.bulkAdd(items.map(i => safeSerialize(i) as T), { allKeys: true }) as Promise<K[]>
+    } catch (e) {
+      console.error('[Dexie] bulkCreate error:', e)
+      throw e
+    }
   }
 
   async clear(): Promise<void> {
-    await this.table.clear()
+    try {
+      await this.table.clear()
+    } catch (e) {
+      console.error('[Dexie] clear error:', e)
+      throw e
+    }
   }
 
   async count(): Promise<number> {
-    return this.table.count()
+    try {
+      return this.table.count()
+    } catch (e) {
+      console.error('[Dexie] count error:', e)
+      return 0
+    }
   }
 }
 

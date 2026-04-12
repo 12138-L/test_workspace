@@ -150,7 +150,7 @@ const columns: DataTableColumns<TeamMember> = [
 ]
 
 onMounted(() => {
-  teamStore.fetchMembers()
+  teamStore.fetchTeam()
 })
 
 function handleAddMember() {

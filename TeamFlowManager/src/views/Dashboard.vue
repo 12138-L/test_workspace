@@ -175,7 +175,7 @@ const { loading, execute: fetchData } = useAsync(
     await Promise.all([
       projectsStore.fetchProjects(),
       tasksStore.fetchTasks(),
-      teamStore.fetchMembers()
+      teamStore.fetchTeam()
     ])
   },
   {

@@ -189,7 +189,7 @@ const handleResetData = () => {
       await Promise.all([
         projectsStore.fetchProjects(),
         tasksStore.fetchTasks(),
-        teamStore.fetchMembers()
+        teamStore.fetchTeam()
       ])
       await loadDbStats()
       message.success('已重置为演示数据')
@@ -208,7 +208,7 @@ const handleClearAll = () => {
       await Promise.all([
         projectsStore.fetchProjects(),
         tasksStore.fetchTasks(),
-        teamStore.fetchMembers()
+        teamStore.fetchTeam()
       ])
       await loadDbStats()
       message.success('已清空所有数据')

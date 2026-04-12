@@ -36,9 +36,12 @@ export interface Project {
 export interface Task {
   id: number
   title: string
+  description: string
+  remark: string
   assignee: string
   priority: '高' | '中' | '低'
   status: '待开始' | '进行中' | '已完成' | '已延期'
+  startTime: string
   dueDate: string
   projectId?: number
   createdAt?: number

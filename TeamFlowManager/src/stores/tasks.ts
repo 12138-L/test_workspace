@@ -26,9 +26,13 @@ export const useTasksStore = defineStore('tasks', {
       }
 
       if (state.searchKeyword) {
+        const keyword = state.searchKeyword.toLowerCase()
         result = result.filter(
           task =>
-            task.title.includes(state.searchKeyword) || task.assignee.includes(state.searchKeyword)
+            task.title.toLowerCase().includes(keyword) ||
+            task.description?.toLowerCase().includes(keyword) ||
+            task.remark?.toLowerCase().includes(keyword) ||
+            task.assignee.toLowerCase().includes(keyword)
         )
       }
 

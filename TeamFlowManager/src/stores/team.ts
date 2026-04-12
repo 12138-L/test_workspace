@@ -27,7 +27,7 @@ export const useTeamStore = defineStore('team', {
   },
 
   actions: {
-    async fetchMembers() {
+    async fetchTeam() {
       this.loading = true
       try {
         this.list = await teamRepo.getAll()
@@ -38,18 +38,18 @@ export const useTeamStore = defineStore('team', {
 
     async addMember(member: Omit<TeamMember, 'id'>) {
       const id = await teamRepo.create(member)
-      await this.fetchMembers()
+      await this.fetchTeam()
       return id
     },
 
     async updateMember(id: number, updates: Partial<TeamMember>) {
       await teamRepo.update(id, updates)
-      await this.fetchMembers()
+      await this.fetchTeam()
     },
 
     async deleteMember(id: number) {
       await teamRepo.delete(id)
-      await this.fetchMembers()
+      await this.fetchTeam()
     },
 
     async clearAll() {
@@ -59,7 +59,11 @@ export const useTeamStore = defineStore('team', {
 
     async bulkCreate(members: Array<Omit<TeamMember, 'id'>>) {
       await teamRepo.bulkCreate(members)
-      await this.fetchMembers()
+      await this.fetchTeam()
+    },
+
+    async fetchMembers() {
+      return this.fetchTeam()
     }
   }
 })

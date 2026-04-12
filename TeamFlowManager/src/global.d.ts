@@ -1,3 +1,5 @@
+declare module 'naive-ui'
+
 import type { DialogApi, LoadingBarApi, MessageApi, NotificationApi } from 'naive-ui'
 
 declare global {
