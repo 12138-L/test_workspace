@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { UserInfo, LoginForm } from '@/types'
 import router from '@/router'
-import { ElMessage } from 'element-plus'
+import { message, loadingBar } from '@/utils/naive'
 
 interface UserState {
   token: string
@@ -23,32 +23,44 @@ export const useUserStore = defineStore('user', {
 
   getters: {
     username: state => state.userInfo?.nickname || '未登录',
-    avatar: state => state.userInfo?.avatar || ''
+    avatar: state => state.userInfo?.avatar || '',
+    userRole: state => state.userInfo?.role || 'guest'
   },
 
   actions: {
-    async login(_loginForm: LoginForm) {
-      return new Promise<void>(resolve => {
-        setTimeout(() => {
-          const mockToken = 'mock-token-' + Date.now()
-          const mockUserInfo: UserInfo = {
-            id: 1,
-            username: _loginForm.username,
-            nickname: '管理员',
-            avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-            role: 'admin',
-            email: 'admin@example.com'
-          }
+    async login(loginForm: LoginForm) {
+      loadingBar.start()
 
-          this.token = mockToken
-          this.userInfo = mockUserInfo
-          this.isAuthenticated = true
+      try {
+        await new Promise<void>(resolve => {
+          setTimeout(() => {
+            const mockToken = 'mock-token-' + Date.now()
+            const mockUserInfo: UserInfo = {
+              id: 1,
+              username: loginForm.username,
+              nickname: '管理员',
+              avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+              role: 'admin',
+              email: 'admin@example.com'
+            }
 
-          this.$persist()
+            this.token = mockToken
+            this.userInfo = mockUserInfo
+            this.isAuthenticated = true
 
-          resolve()
-        }, 1000)
-      })
+            resolve()
+          }, 800)
+        })
+
+        loadingBar.finish()
+        message.success('登录成功，欢迎回来！')
+
+        await router.push('/dashboard')
+      } catch (error) {
+        loadingBar.error()
+        message.error('登录失败，请重试')
+        throw error
+      }
     },
 
     logout() {
@@ -56,14 +68,14 @@ export const useUserStore = defineStore('user', {
       this.userInfo = null
       this.isAuthenticated = false
 
-      this.$persist()
-
+      message.info('已安全退出登录')
       router.push('/login')
-      ElMessage.success('已退出登录')
     },
 
-    getUserInfo() {
-      return new Promise(resolve => {
+    async refreshUserInfo() {
+      if (!this.token) return
+
+      try {
         const mockUserInfo: UserInfo = {
           id: 1,
           username: 'admin',
@@ -73,8 +85,9 @@ export const useUserStore = defineStore('user', {
           email: 'admin@example.com'
         }
         this.userInfo = mockUserInfo
-        resolve(mockUserInfo)
-      })
+      } catch (error) {
+        message.error('刷新用户信息失败')
+      }
     }
   }
 })

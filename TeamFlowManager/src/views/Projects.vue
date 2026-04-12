@@ -1,98 +1,215 @@
 <template>
   <div class="projects-container">
-    <div class="page-header">
-      <h1 class="page-title">项目管理</h1>
-      <div class="header-actions">
-        <el-button type="primary" @click="handleCreateProject">
-          <el-icon><Plus /></el-icon>
+    <n-page-header title="项目管理" subtitle="管理所有团队项目">
+      <template #extra>
+        <n-button type="primary" @click="handleCreateProject">
+          <template #icon>
+            <span v-html="Icons.add" class="icon-btn"></span>
+          </template>
           新建项目
-        </el-button>
-      </div>
-    </div>
-
-    <el-card>
-      <template #header>
-        <span>项目列表</span>
+        </n-button>
       </template>
+    </n-page-header>
 
-      <el-table :data="projects" style="width: 100%">
-        <el-table-column prop="name" label="项目名称" />
-        <el-table-column prop="manager" label="负责人" width="120" />
-        <el-table-column prop="status" label="状态" width="120">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">
-              {{ scope.row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="progress" label="进度" width="120">
-          <template #default="scope">
-            <el-progress :percentage="scope.row.progress" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="startDate" label="开始日期" width="120" />
-        <el-table-column prop="endDate" label="结束日期" width="120" />
-        <el-table-column label="操作" width="200">
-          <template #default="scope">
-            <el-button size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <n-card style="margin-top: 20px">
+      <n-data-table
+        :columns="columns"
+        :data="projectsStore.list"
+        :pagination="pagination"
+        striped
+        virtual-scroll
+        :max-height="500"
+      />
+    </n-card>
+
+    <n-modal v-model:show="showModal" preset="card" :title="editingProject ? '编辑项目' : '新建项目'" style="width: 500px">
+      <n-form :model="formData" label-placement="left" label-width="100">
+        <n-form-item label="项目名称" required>
+          <n-input v-model:value="formData.name" placeholder="请输入项目名称" />
+        </n-form-item>
+        <n-form-item label="负责人">
+          <n-input v-model:value="formData.manager" placeholder="请输入负责人" />
+        </n-form-item>
+        <n-form-item label="项目状态">
+          <n-select v-model:value="formData.status" :options="statusOptions" />
+        </n-form-item>
+        <n-form-item label="进度">
+          <n-slider v-model:value="formData.progress" :min="0" :max="100" :step="5" />
+          <div style="text-align: right; color: #666; font-size: 12px">{{ formData.progress }}%</div>
+        </n-form-item>
+        <n-form-item label="开始日期">
+          <n-date-picker v-model:value="formData.startDate as any" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="width: 100%" />
+        </n-form-item>
+        <n-form-item label="截止日期">
+          <n-date-picker v-model:value="formData.endDate as any" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="width: 100%" />
+        </n-form-item>
+      </n-form>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showModal = false">取消</n-button>
+          <n-button type="primary" @click="handleSubmit">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import type { TagType } from '@/types'
-import { useProjectsStore } from '@/stores'
+import type { DataTableColumns } from 'naive-ui'
+import { h, ref } from 'vue'
+import type { Project } from '@/types'
+import { useProjectsStore } from '@/stores/projects'
+import { message, dialog } from '@/utils/naive'
+import { getStatusType, getProgressColor } from '@/utils/formatters'
+import { Icons } from '@/config/icons'
 
 const projectsStore = useProjectsStore()
-const projects = projectsStore.list
 
-const getStatusType = (status: string): TagType => {
-  const statusMap: Record<string, TagType> = {
-    进行中: 'primary',
-    已完成: 'success',
-    已暂停: 'warning'
+const pagination = {
+  pageSize: 10
+}
+
+const showModal = ref(false)
+const editingProject = ref<Project | null>(null)
+const formData = ref({
+  name: '',
+  manager: '',
+  status: '进行中' as Project['status'],
+  progress: 0,
+  startDate: '',
+  endDate: ''
+})
+
+const statusOptions = [
+  { label: '进行中', value: '进行中' },
+  { label: '已完成', value: '已完成' },
+  { label: '已暂停', value: '已暂停' }
+]
+
+const columns: DataTableColumns<Project> = [
+  {
+    title: '项目名称',
+    key: 'name',
+    width: 200
+  },
+  {
+    title: '负责人',
+    key: 'manager',
+    width: 100
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 120,
+    render: (row: Project) =>
+      h('n-tag', { type: getStatusType(row.status), size: 'small' }, { default: () => row.status })
+  },
+  {
+    title: '进度',
+    key: 'progress',
+    width: 180,
+    render: (row: Project) =>
+      h('n-progress', {
+        percentage: Number(row.progress),
+        color: getProgressColor(Number(row.progress)),
+        height: 6
+      })
+  },
+  {
+    title: '开始日期',
+    key: 'startDate',
+    width: 120
+  },
+  {
+    title: '截止日期',
+    key: 'endDate',
+    width: 120
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 140,
+    fixed: 'right',
+    render: (row: Project) => [
+      h(
+        'n-button',
+        { quaternary: true, circle: true, size: 'small', onClick: () => handleEdit(row) },
+        {
+          icon: () =>
+            h('span', {
+              innerHTML: Icons.edit,
+              style: 'display: flex; width: 16px; height: 16px'
+            })
+        }
+      ),
+      h(
+        'n-button',
+        { quaternary: true, circle: true, size: 'small', onClick: () => handleDelete(row) },
+        {
+          icon: () =>
+            h('span', {
+              innerHTML: Icons.delete,
+              style: 'display: flex; width: 16px; height: 16px; color: #d03050'
+            })
+        }
+      )
+    ]
   }
-  return statusMap[status] || 'info'
+]
+
+function handleCreateProject() {
+  editingProject.value = null
+  formData.value = {
+    name: '',
+    manager: '',
+    status: '进行中',
+    progress: 0,
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: ''
+  }
+  showModal.value = true
 }
 
-const handleCreateProject = () => {
-  // 创建项目逻辑
+function handleEdit(project: Project) {
+  editingProject.value = project
+  formData.value = { ...project }
+  showModal.value = true
 }
 
-const handleView = (_project: any) => {
-  // 查看项目逻辑
+function handleDelete(project: Project) {
+  dialog.warning({
+    title: '确认删除',
+    content: `确定要删除项目「${project.name}」吗？此操作不可恢复。`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      projectsStore.deleteProject(project.id)
+      message.success(`项目「${project.name}」已删除`)
+    }
+  })
 }
 
-const handleEdit = (_project: any) => {
-  // 编辑项目逻辑
+function handleSubmit() {
+  if (!formData.value.name.trim()) {
+    message.warning('请输入项目名称')
+    return
+  }
+
+  if (editingProject.value) {
+    projectsStore.updateProject(editingProject.value.id, formData.value)
+    message.success('项目已更新')
+  } else {
+    projectsStore.addProject(formData.value)
+    message.success('项目创建成功')
+  }
+
+  showModal.value = false
 }
 </script>
 
 <style scoped>
 .projects-container {
-  padding: 20px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-:deep(.el-progress) {
-  width: 100px;
+  padding: 0;
 }
 </style>

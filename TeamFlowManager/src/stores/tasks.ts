@@ -5,6 +5,7 @@ interface TasksState {
   list: Task[]
   loading: boolean
   searchKeyword: string
+  statusFilter: string | null
 }
 
 const mockTasks: Task[] = [
@@ -51,19 +52,34 @@ const mockTasks: Task[] = [
 ]
 
 export const useTasksStore = defineStore('tasks', {
+  persist: {
+    key: 'tasks-store',
+    paths: ['list']
+  },
+
   state: (): TasksState => ({
     list: mockTasks,
     loading: false,
-    searchKeyword: ''
+    searchKeyword: '',
+    statusFilter: null
   }),
 
   getters: {
     filteredTasks: state => {
-      if (!state.searchKeyword) return state.list
-      return state.list.filter(
-        task =>
-          task.title.includes(state.searchKeyword) || task.assignee.includes(state.searchKeyword)
-      )
+      let result = state.list
+
+      if (state.statusFilter) {
+        result = result.filter(task => task.status === state.statusFilter)
+      }
+
+      if (state.searchKeyword) {
+        result = result.filter(
+          task =>
+            task.title.includes(state.searchKeyword) || task.assignee.includes(state.searchKeyword)
+        )
+      }
+
+      return result
     },
     pendingTasks: state => state.list.filter(t => t.status === '待开始'),
     inProgressTasks: state => state.list.filter(t => t.status === '进行中'),
@@ -80,6 +96,10 @@ export const useTasksStore = defineStore('tasks', {
   actions: {
     setSearchKeyword(keyword: string) {
       this.searchKeyword = keyword
+    },
+
+    setStatusFilter(status: string | null) {
+      this.statusFilter = status
     },
 
     async fetchTasks() {
@@ -102,7 +122,7 @@ export const useTasksStore = defineStore('tasks', {
 
     updateTask(id: number, updates: Partial<Task>) {
       const index = this.list.findIndex(t => t.id === id)
-      if (index !== -1) {
+      if (index > -1) {
         this.list[index] = { ...this.list[index], ...updates }
       }
     },

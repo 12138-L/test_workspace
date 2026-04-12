@@ -1,5 +1,8 @@
+import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layouts/Layout.vue'
+import { useUserStore } from '@/stores'
+import { generateRoutes } from '@/config/menu'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -8,71 +11,30 @@ const router = createRouter({
       path: '/',
       component: Layout,
       redirect: '/dashboard',
-      children: [
-        {
-          path: 'dashboard',
-          name: 'Dashboard',
-          component: () => import('@/views/Dashboard.vue'),
-          meta: { title: '仪表板', icon: 'Dashboard' }
-        },
-        {
-          path: 'team',
-          name: 'Team',
-          component: () => import('@/views/Team.vue'),
-          meta: { title: '团队管理', icon: 'User' }
-        },
-        {
-          path: 'projects',
-          name: 'Projects',
-          component: () => import('@/views/Projects.vue'),
-          meta: { title: '项目管理', icon: 'Document' }
-        },
-        {
-          path: 'tasks',
-          name: 'Tasks',
-          component: () => import('@/views/Tasks.vue'),
-          meta: { title: '任务管理', icon: 'List' }
-        },
-        {
-          path: 'calendar',
-          name: 'Calendar',
-          component: () => import('@/views/Calendar.vue'),
-          meta: { title: '日历', icon: 'Calendar' }
-        },
-        {
-          path: 'settings',
-          name: 'Settings',
-          component: () => import('@/views/Settings.vue'),
-          meta: { title: '系统设置', icon: 'Setting' }
-        }
-      ]
+      children: generateRoutes() as RouteRecordRaw[]
     },
     {
       path: '/login',
       name: 'Login',
-      component: () => import('@/views/Login.vue')
+      component: () => import('@/views/Login.vue'),
+      meta: { title: '登录' }
     }
   ]
 })
 
-router.beforeEach((to, from, next) => {
-  let isAuthenticated = false
+router.beforeEach((to, _from, next) => {
+  const userStore = useUserStore()
 
-  try {
-    const userStoreData = JSON.parse(localStorage.getItem('user-store') || '{}')
-    isAuthenticated = !!userStoreData.state?.isAuthenticated
-  } catch (e) {
-    isAuthenticated = false
-  }
+  document.title = `${to.meta.title || '页面'} - TeamFlow Manager`
 
   if (to.path === '/login') {
-    if (isAuthenticated) {
+    if (userStore.isAuthenticated) {
       next('/dashboard')
     } else {
       next()
     }
   } else {
-    if (isAuthenticated) {
+    if (userStore.isAuthenticated) {
       next()
     } else {
       next('/login')

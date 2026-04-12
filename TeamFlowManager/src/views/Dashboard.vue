@@ -1,199 +1,465 @@
 <template>
   <div class="dashboard-container">
-    <div class="dashboard-header">
-      <h1 class="page-title">仪表板</h1>
-      <p class="page-description">欢迎使用 TeamFlowManager，这里是您的团队工作流管理中心</p>
-    </div>
+    <n-page-header :title="greeting" :subtitle="`今天是 ${currentDate}, ${userStore.username}`">
+      <template #extra>
+        <n-button type="primary" @click="handleRefresh" size="small">
+          <template #icon>
+            <span v-html="Icons.refresh" class="icon-btn"></span>
+          </template>
+          刷新数据
+        </n-button>
+      </template>
+    </n-page-header>
 
-    <div class="stats-grid">
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon">
-            <el-icon size="40" color="#409EFF"><User /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">5</div>
-            <div class="stat-label">团队成员</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon">
-            <el-icon size="40" color="#67C23A"><Document /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ projectsStore.activeProjects.length }}</div>
-            <div class="stat-label">进行中项目</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon">
-            <el-icon size="40" color="#E6A23C"><List /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ tasksStore.pendingTasks.length }}</div>
-            <div class="stat-label">待完成任务</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon">
-            <el-icon size="40" color="#F56C6C"><Clock /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ tasksStore.overdueTasks.length }}</div>
-            <div class="stat-label">已逾期任务</div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <div class="dashboard-content">
-      <el-row :gutter="20">
-        <el-col :span="16">
-          <el-card class="chart-card">
-            <template #header>
-              <span class="card-title">项目进度</span>
-            </template>
-            <div class="chart-placeholder">
-              <p>项目进度图表区域</p>
+    <n-grid :x-gap="20" :y-gap="20" cols="4 s:2 m:4 l:4 xl:4" style="margin-top: 20px">
+      <n-grid-item>
+        <n-card hoverable class="stat-card">
+          <div class="stat-item">
+            <div class="stat-icon projects">
+              <span v-html="Icons.project"></span>
             </div>
-          </el-card>
-        </el-col>
+            <div class="stat-content">
+              <div class="stat-value">{{ projectsStore.list.length }}</div>
+              <div class="stat-label">项目总数</div>
+            </div>
+          </div>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card hoverable class="stat-card">
+          <div class="stat-item">
+            <div class="stat-icon tasks">
+              <span v-html="Icons.task"></span>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ tasksStore.stats.total }}</div>
+              <div class="stat-label">任务总数</div>
+            </div>
+          </div>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card hoverable class="stat-card">
+          <div class="stat-item">
+            <div class="stat-icon team">
+              <span v-html="Icons.team"></span>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ teamStore.stats.total }}</div>
+              <div class="stat-label">团队成员</div>
+            </div>
+          </div>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card hoverable class="stat-card">
+          <div class="stat-item">
+            <div class="stat-icon done">
+              <span v-html="Icons.check"></span>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ tasksStore.stats.completed }}</div>
+              <div class="stat-label">已完成任务</div>
+            </div>
+          </div>
+        </n-card>
+      </n-grid-item>
+    </n-grid>
 
-        <el-col :span="8">
-          <el-card class="activity-card">
-            <template #header>
-              <span class="card-title">最近活动</span>
-            </template>
-            <el-timeline>
-              <el-timeline-item
-                v-for="activity in activities"
-                :key="activity.id"
-                :timestamp="activity.time"
-              >
-                {{ activity.content }}
-              </el-timeline-item>
-            </el-timeline>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
+    <n-grid :x-gap="20" :y-gap="20" cols="1 s:1 m:2 l:2 xl:2" style="margin-top: 20px">
+      <n-grid-item>
+        <n-card title="最近任务" hoverable>
+          <n-spin :show="loading">
+            <template #description>加载中...</template>
+            <n-list bordered class="task-list">
+              <template v-if="tasksStore.list.length > 0">
+                <n-list-item v-for="task in tasksStore.list.slice(0, 5)" :key="task.id">
+                  <div class="task-item">
+                    <div class="task-icon">
+                      <span v-html="Icons.task"></span>
+                    </div>
+                    <div class="task-content">
+                      <div class="task-title">{{ task.title }}</div>
+                      <div class="task-desc">
+                        <span v-html="Icons.user" class="task-desc-icon"></span>
+                        {{ task.assignee }} · {{ task.dueDate }}
+                      </div>
+                    </div>
+                    <n-tag :type="getStatusType(task.status)" size="small">
+                      {{ task.status }}
+                    </n-tag>
+                  </div>
+                </n-list-item>
+              </template>
+              <div v-else class="empty-state">
+                <div class="empty-icon">
+                  <span v-html="Icons.task"></span>
+                </div>
+                <p>暂无任务</p>
+              </div>
+            </n-list>
+          </n-spin>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card title="项目进度" hoverable>
+          <n-spin :show="loading">
+            <template #description>加载中...</template>
+            <n-space vertical class="progress-wrapper">
+              <template v-if="projectsStore.list.length > 0">
+                <div
+                  v-for="project in projectsStore.list.slice(0, 5)"
+                  :key="project.id"
+                  class="project-progress"
+                >
+                  <div class="progress-header">
+                    <div class="project-info">
+                      <div class="project-icon">
+                        <span v-html="Icons.project"></span>
+                      </div>
+                      <span class="project-name">{{ project.name }}</span>
+                    </div>
+                    <span class="progress-value">{{ project.progress }}%</span>
+                  </div>
+                  <n-progress
+                    :percentage="project.progress"
+                    :color="getProgressColor(project.progress)"
+                    :height="8"
+                    :show-indicator="false"
+                    class="progress-bar"
+                  />
+                </div>
+              </template>
+              <div v-else class="empty-state">
+                <div class="empty-icon">
+                  <span v-html="Icons.project"></span>
+                </div>
+                <p>暂无项目</p>
+              </div>
+            </n-space>
+          </n-spin>
+        </n-card>
+      </n-grid-item>
+    </n-grid>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Clock, User, Document, List } from '@element-plus/icons-vue'
-import type { Activity } from '@/types'
-import { useProjectsStore, useTasksStore } from '@/stores'
+import { onMounted, computed } from 'vue'
+import { message, getStatusType, getProgressColor, useAsync } from '@/utils'
+import { useProjectsStore } from '@/stores/projects'
+import { useTasksStore } from '@/stores/tasks'
+import { useUserStore, useTeamStore } from '@/stores'
+import { Icons } from '@/config/icons'
 
 const projectsStore = useProjectsStore()
 const tasksStore = useTasksStore()
+const userStore = useUserStore()
+const teamStore = useTeamStore()
 
-const activities: Activity[] = [
-  { id: 1, time: '2024-01-15 14:30', content: '张三完成了"项目需求分析"任务' },
-  { id: 2, time: '2024-01-15 13:15', content: '李四创建了新项目"产品设计"' },
-  { id: 3, time: '2024-01-15 11:45', content: '王五更新了"技术文档"' },
-  { id: 4, time: '2024-01-15 10:20', content: '赵六加入了团队' },
-  { id: 5, time: '2024-01-15 09:00', content: '系统每日备份已完成' }
-]
+const currentDate = computed(() => {
+  const now = new Date()
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return `${now.getMonth() + 1}月${now.getDate()}日 ${weekDays[now.getDay()]}`
+})
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return '早上好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
+
+const { loading, execute: fetchData } = useAsync(
+  async () => {
+    await Promise.all([
+      projectsStore.fetchProjects(),
+      tasksStore.fetchTasks(),
+      teamStore.fetchMembers()
+    ])
+  },
+  {
+    errorMessage: '加载数据失败'
+  }
+)
+
+onMounted(() => {
+  fetchData()
+})
+
+const handleRefresh = () => {
+  message.info('正在刷新数据...')
+  fetchData()
+}
 </script>
 
 <style scoped>
 .dashboard-container {
-  padding: 20px;
-}
-
-.dashboard-header {
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0 0 8px 0;
-}
-
-.page-description {
-  color: #909399;
-  margin: 0;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
+  padding: 0 4px;
 }
 
 .stat-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  overflow: hidden;
+  position: relative;
 }
 
-.stat-content {
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.stat-card:nth-child(1)::before {
+  background: linear-gradient(90deg, #8080f2, #a0a0ff);
+}
+
+.stat-card:nth-child(2)::before {
+  background: linear-gradient(90deg, #63e2b7, #85f0d0);
+}
+
+.stat-card:nth-child(3)::before {
+  background: linear-gradient(90deg, #70c0e8, #90d8ff);
+}
+
+.stat-card:nth-child(4)::before {
+  background: linear-gradient(90deg, #f7c861, #ffdd88);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.stat-item {
   display: flex;
   align-items: center;
-  padding: 20px;
+  gap: 16px;
+  padding: 4px 0;
 }
 
 .stat-icon {
-  margin-right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+}
+
+.stat-icon span {
+  display: flex;
+  width: 28px;
+  height: 28px;
+}
+
+.stat-icon.projects {
+  background: linear-gradient(135deg, #8080f2 0%, #a0a0ff 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(128, 128, 242, 0.4);
+}
+
+.stat-icon.tasks {
+  background: linear-gradient(135deg, #63e2b7 0%, #85f0d0 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(99, 226, 183, 0.4);
+}
+
+.stat-icon.team {
+  background: linear-gradient(135deg, #70c0e8 0%, #90d8ff 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(112, 192, 232, 0.4);
+}
+
+.stat-icon.done {
+  background: linear-gradient(135deg, #f7c861 0%, #ffdd88 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(247, 200, 97, 0.4);
+}
+
+.stat-content {
+  flex: 1;
 }
 
 .stat-value {
   font-size: 32px;
-  font-weight: 600;
-  color: #303133;
-  line-height: 1;
+  font-weight: 700;
+  background: linear-gradient(135deg, #333647 0%, #555867);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
 }
 
 .stat-label {
-  color: #909399;
-  margin-top: 4px;
+  font-size: 14px;
+  color: #8c9aa8;
+  margin-top: 6px;
+  font-weight: 500;
 }
 
-.dashboard-content {
-  margin-top: 24px;
+.task-list {
+  margin-top: 16px;
 }
 
-.chart-card,
-.activity-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  padding: 8px 0;
 }
 
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.chart-placeholder {
-  height: 300px;
+.task-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(112, 192, 232, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
-  border-radius: 4px;
-  color: #909399;
+  flex-shrink: 0;
+  color: #70c0e8;
 }
 
-:deep(.el-timeline) {
-  padding-left: 0;
+.task-icon span {
+  display: flex;
+  width: 18px;
+  height: 18px;
 }
 
-:deep(.el-timeline-item__timestamp) {
-  color: #909399;
+.task-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333647;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-desc {
   font-size: 12px;
+  color: #8c9aa8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.task-desc-icon {
+  display: flex;
+  width: 14px;
+  height: 14px;
+}
+
+.progress-wrapper {
+  padding: 16px 0 0 0;
+}
+
+.project-progress {
+  padding: 10px 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.project-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(128, 128, 242, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #8080f2;
+}
+
+.project-icon span {
+  display: flex;
+  width: 18px;
+  height: 18px;
+}
+
+.project-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333647;
+}
+
+.progress-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #8080f2;
+}
+
+.progress-bar {
+  border-radius: 4px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px;
+  color: #8c9aa8;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  color: #8c9aa8;
+}
+
+.empty-icon span {
+  display: flex;
+  width: 28px;
+  height: 28px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
 }
 </style>

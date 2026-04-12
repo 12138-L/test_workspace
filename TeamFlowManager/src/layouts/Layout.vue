@@ -1,163 +1,150 @@
 <template>
-  <div class="layout-container">
-    <!-- 顶部导航栏 -->
-    <header class="header">
+  <n-layout class="app-layout">
+    <n-layout-header bordered class="layout-header">
       <div class="header-left">
-        <div class="logo">
-          <el-icon class="logo-icon"><Menu /></el-icon>
-          <span class="logo-text">TeamFlowManager</span>
-        </div>
-      </div>
-
-      <div class="header-center">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ route.meta?.title || '未知页面' }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <n-button quaternary circle @click="toggleSidebar" class="collapse-btn">
+          <span v-if="appStore.sidebarCollapsed" v-html="Icons.menu" class="icon-btn"></span>
+          <span v-else v-html="Icons.close" class="icon-btn"></span>
+        </n-button>
+        <h1 class="app-title">TeamFlow Manager</h1>
       </div>
 
       <div class="header-right">
-        <el-dropdown>
-          <span class="user-info">
-            <el-avatar :size="32" :src="userStore.avatar" />
-            <span class="username">{{ userStore.username }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item>个人中心</el-dropdown-item>
-              <el-dropdown-item>系统设置</el-dropdown-item>
-              <el-dropdown-item divided @click="userStore.logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <n-space align="center">
+          <n-badge :value="5" type="info" dot>
+            <n-button quaternary circle class="icon-btn-wrapper">
+              <span v-html="Icons.bell" class="icon-btn"></span>
+            </n-button>
+          </n-badge>
+
+          <n-dropdown trigger="click" :options="dropdownOptions" @select="handleDropdownSelect">
+            <div class="user-info">
+              <n-avatar round :src="userStore.avatar" size="small" />
+              <span class="username">{{ userStore.username }}</span>
+              <span v-html="Icons.chevronDown" class="icon-btn" style="width: 16px; height: 16px"></span>
+            </div>
+          </n-dropdown>
+        </n-space>
       </div>
-    </header>
+    </n-layout-header>
 
-    <!-- 主体区域 -->
-    <div class="main-container">
-      <!-- 侧边栏 -->
-      <aside class="sidebar">
-        <el-menu
-          :default-active="route.path"
-          class="sidebar-menu"
-          router
-          :collapse="appStore.sidebarCollapsed"
-        >
-          <el-menu-item index="/dashboard">
-            <el-icon><DataAnalysis /></el-icon>
-            <span>仪表板</span>
-          </el-menu-item>
+    <n-layout has-sider>
+      <n-layout-sider
+        bordered
+        collapse-mode="width"
+        :collapsed-width="64"
+        :width="200"
+        :collapsed="appStore.sidebarCollapsed"
+        class="layout-sider"
+        show-trigger="bar"
+      >
+        <n-menu
+          :value="activeMenu"
+          :collapsed="appStore.sidebarCollapsed"
+          :collapsed-width="64"
+          :options="menuOptions"
+        />
+      </n-layout-sider>
 
-          <el-menu-item index="/team">
-            <el-icon><User /></el-icon>
-            <span>团队管理</span>
-          </el-menu-item>
-
-          <el-menu-item index="/projects">
-            <el-icon><Document /></el-icon>
-            <span>项目管理</span>
-          </el-menu-item>
-
-          <el-menu-item index="/tasks">
-            <el-icon><List /></el-icon>
-            <span>任务管理</span>
-          </el-menu-item>
-
-          <el-menu-item index="/calendar">
-            <el-icon><Calendar /></el-icon>
-            <span>日历</span>
-          </el-menu-item>
-
-          <el-menu-item index="/settings">
-            <el-icon><Setting /></el-icon>
-            <span>系统设置</span>
-          </el-menu-item>
-        </el-menu>
-
-        <div class="sidebar-toggle" @click="toggleSidebar">
-          <el-icon :size="20">
-            <DArrowLeft v-if="!appStore.sidebarCollapsed" />
-            <DArrowRight v-else />
-          </el-icon>
-        </div>
-      </aside>
-
-      <!-- 内容区域 -->
-      <main class="content">
-        <div class="content-wrapper">
-          <RouterView />
-        </div>
-      </main>
-    </div>
-  </div>
+      <n-layout-content class="layout-content">
+        <router-view v-slot="{ Component }">
+          <transition name="fade-transform" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </n-layout-content>
+    </n-layout>
+  </n-layout>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-import {
-  Menu,
-  ArrowDown,
-  DataAnalysis,
-  User,
-  Document,
-  List,
-  Calendar,
-  Setting,
-  DArrowLeft,
-  DArrowRight
-} from '@element-plus/icons-vue'
+import type { DropdownOption } from 'naive-ui'
+import { useRouter, onBeforeRouteUpdate } from 'vue-router'
 import { useAppStore, useUserStore } from '@/stores'
+import { generateMenuOptions } from '@/config/menu'
+import { Icons } from '@/config/icons'
 
-const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
 
-const toggleSidebar = () => {
+const activeMenu = ref(router.currentRoute.value.path)
+
+function handleMenuClick(path: string) {
+  activeMenu.value = path
+  router.push(path)
+}
+
+const menuOptions = generateMenuOptions(handleMenuClick)
+
+onBeforeRouteUpdate(to => {
+  activeMenu.value = to.path
+})
+
+const dropdownOptions: DropdownOption[] = [
+  {
+    label: '个人中心',
+    key: 'profile'
+  },
+  {
+    label: '系统设置',
+    key: 'settings'
+  },
+  {
+    type: 'divider',
+    key: 'd1'
+  },
+  {
+    label: '退出登录',
+    key: 'logout'
+  }
+]
+
+function toggleSidebar() {
   appStore.toggleSidebar()
+}
+
+function handleDropdownSelect(key: string) {
+  if (key === 'logout') {
+    userStore.logout()
+  } else if (key === 'settings') {
+    router.push('/settings')
+  }
 }
 </script>
 
 <style scoped>
-.layout-container {
+.app-layout {
   height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
-.header {
-  height: 60px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+.layout-header {
+  height: 64px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  background: #fff;
+  z-index: 100;
 }
 
 .header-left {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
-.logo {
+.collapse-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.app-title {
   font-size: 18px;
   font-weight: 600;
-  color: #409eff;
-}
-
-.logo-icon {
-  margin-right: 8px;
-  font-size: 24px;
-}
-
-.header-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+  color: #333647;
+  margin: 0;
 }
 
 .header-right {
@@ -168,100 +155,51 @@ const toggleSidebar = () => {
 .user-info {
   display: flex;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  border-radius: 6px;
+  transition: background 0.2s;
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background: #f5f7fa;
 }
 
 .username {
-  margin: 0 8px;
   font-size: 14px;
+  font-weight: 500;
 }
 
-.main-container {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
+.layout-sider {
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-.sidebar {
-  width: 240px;
-  background: #001529;
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s;
-  position: relative;
-}
-
-.sidebar.collapsed {
-  width: 64px;
-}
-
-.sidebar-menu {
-  flex: 1;
-  border: none;
-  background: transparent;
-}
-
-.sidebar-menu:not(.el-menu--collapse) {
-  width: 240px;
-}
-
-.sidebar-toggle {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #002140;
-  color: #fff;
+.layout-sider .n-menu-item-content {
   cursor: pointer;
-  border-top: 1px solid #001529;
 }
 
-.sidebar-toggle:hover {
-  background: #001529;
-}
-
-.content {
-  flex: 1;
-  background: #f0f2f5;
-  overflow: auto;
-}
-
-.content-wrapper {
+.layout-content {
   padding: 20px;
-  min-height: 100%;
+  background: #f5f7fa;
+  min-height: calc(100vh - 64px);
+  overflow-y: auto;
 }
 
-:deep(.el-menu) {
-  border-right: none;
+.fade-transform-enter-active,
+.fade-transform-leave-active {
+  transition: all 0.3s ease;
 }
 
-:deep(.el-menu-item) {
-  color: #bfcbd9;
+.fade-transform-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
 }
 
-:deep(.el-menu-item:hover) {
-  background: #001529;
-  color: #fff;
-}
-
-:deep(.el-menu-item.is-active) {
-  background: #409eff;
-  color: #fff;
-}
-
-:deep(.el-sub-menu__title) {
-  color: #bfcbd9;
-}
-
-:deep(.el-sub-menu__title:hover) {
-  background: #001529;
-  color: #fff;
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 </style>

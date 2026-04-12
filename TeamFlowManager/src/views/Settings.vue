@@ -1,192 +1,153 @@
 <template>
   <div class="settings-container">
-    <div class="page-header">
-      <h1 class="page-title">系统设置</h1>
-    </div>
-
-    <el-row :gutter="20">
-      <el-col :span="8">
-        <el-card>
-          <template #header>
-            <span>基本设置</span>
+    <n-page-header title="系统设置" subtitle="配置系统参数">
+      <template #extra>
+        <n-button type="primary" @click="saveAllSettings">
+          <template #icon>
+            <span v-html="Icons.check" class="icon-btn"></span>
           </template>
-          <el-form :model="basicSettings" label-width="100px">
-            <el-form-item label="系统名称">
-              <el-input v-model="basicSettings.systemName" />
-            </el-form-item>
-            <el-form-item label="语言">
-              <el-select v-model="basicSettings.language" style="width: 100%">
-                <el-option label="中文" value="zh-CN" />
-                <el-option label="English" value="en-US" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="时区">
-              <el-select v-model="basicSettings.timezone" style="width: 100%">
-                <el-option label="北京时间 (UTC+8)" value="UTC+8" />
-                <el-option label="UTC" value="UTC" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveBasicSettings">保存</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card>
-          <template #header>
-            <span>通知设置</span>
-          </template>
-          <el-form :model="notificationSettings" label-width="100px">
-            <el-form-item label="邮件通知">
-              <el-switch v-model="notificationSettings.email" />
-            </el-form-item>
-            <el-form-item label="站内消息">
-              <el-switch v-model="notificationSettings.inApp" />
-            </el-form-item>
-            <el-form-item label="任务提醒">
-              <el-switch v-model="notificationSettings.taskReminder" />
-            </el-form-item>
-            <el-form-item label="项目更新">
-              <el-switch v-model="notificationSettings.projectUpdate" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveNotificationSettings">保存</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card>
-          <template #header>
-            <span>安全设置</span>
-          </template>
-          <el-form :model="securitySettings" label-width="100px">
-            <el-form-item label="双重认证">
-              <el-switch v-model="securitySettings.twoFactorAuth" />
-            </el-form-item>
-            <el-form-item label="会话超时">
-              <el-select v-model="securitySettings.sessionTimeout" style="width: 100%">
-                <el-option label="30分钟" value="30" />
-                <el-option label="1小时" value="60" />
-                <el-option label="2小时" value="120" />
-                <el-option label="4小时" value="240" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="密码强度">
-              <el-select v-model="securitySettings.passwordStrength" style="width: 100%">
-                <el-option label="低" value="low" />
-                <el-option label="中" value="medium" />
-                <el-option label="高" value="high" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveSecuritySettings">保存</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card class="system-info">
-      <template #header>
-        <span>系统信息</span>
+          保存全部
+        </n-button>
       </template>
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="系统版本">v1.0.0</el-descriptions-item>
-        <el-descriptions-item label="Vue版本">3.4.15</el-descriptions-item>
-        <el-descriptions-item label="构建时间">2024-01-15</el-descriptions-item>
-        <el-descriptions-item label="最后更新">2024-01-15</el-descriptions-item>
-        <el-descriptions-item label="技术支持">tech@teamflow.com</el-descriptions-item>
-        <el-descriptions-item label="文档地址">
-          <el-link type="primary" href="#">查看文档</el-link>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
+    </n-page-header>
+
+    <n-grid :x-gap="20" :y-gap="20" cols="1 s:1 m:3 l:3 xl:3" style="margin-top: 20px">
+      <n-grid-item>
+        <n-card title="基本设置" hoverable>
+          <template #header-extra>
+            <span v-html="Icons.settings" class="card-header-icon"></span>
+          </template>
+          <n-form :model="basicSettings" label-placement="left" label-width="100" class="settings-form">
+            <n-form-item label="系统名称">
+              <n-input v-model:value="basicSettings.systemName" />
+            </n-form-item>
+            <n-form-item label="语言">
+              <n-select v-model:value="basicSettings.language" style="width: 100%" :options="languageOptions" />
+            </n-form-item>
+            <n-form-item label="时区">
+              <n-select v-model:value="basicSettings.timezone" style="width: 100%" :options="timezoneOptions" />
+            </n-form-item>
+          </n-form>
+        </n-card>
+      </n-grid-item>
+
+      <n-grid-item>
+        <n-card title="通知设置" hoverable>
+          <template #header-extra>
+            <span v-html="Icons.bell" class="card-header-icon"></span>
+          </template>
+          <n-form :model="notificationSettings" label-placement="left" label-width="100" class="settings-form">
+            <n-form-item label="邮件通知">
+              <n-switch v-model:value="notificationSettings.email" />
+            </n-form-item>
+            <n-form-item label="站内消息">
+              <n-switch v-model:value="notificationSettings.inApp" />
+            </n-form-item>
+            <n-form-item label="任务提醒">
+              <n-switch v-model:value="notificationSettings.taskReminder" />
+            </n-form-item>
+            <n-form-item label="项目更新">
+              <n-switch v-model:value="notificationSettings.projectUpdate" />
+            </n-form-item>
+          </n-form>
+        </n-card>
+      </n-grid-item>
+
+      <n-grid-item>
+        <n-card title="安全设置" hoverable>
+          <template #header-extra>
+            <span v-html="Icons.user" class="card-header-icon"></span>
+          </template>
+          <n-form :model="securitySettings" label-placement="left" label-width="100" class="settings-form">
+            <n-form-item label="双重认证">
+              <n-switch v-model:value="securitySettings.twoFactorAuth" />
+            </n-form-item>
+            <n-form-item label="会话超时">
+              <n-select v-model:value="securitySettings.sessionTimeout" style="width: 100%" :options="timeoutOptions" />
+            </n-form-item>
+            <n-form-item label="密码强度">
+              <n-select v-model:value="securitySettings.passwordStrength" style="width: 100%" :options="strengthOptions" />
+            </n-form-item>
+          </n-form>
+        </n-card>
+      </n-grid-item>
+    </n-grid>
+
+    <n-card style="margin-top: 20px" title="系统信息" hoverable>
+      <n-descriptions :column="2" bordered>
+        <n-descriptions-item label="系统版本">v1.0.0</n-descriptions-item>
+        <n-descriptions-item label="Vue版本">3.4.15</n-descriptions-item>
+        <n-descriptions-item label="构建时间">2024-01-15</n-descriptions-item>
+        <n-descriptions-item label="UI框架">Naive UI 2.38.x</n-descriptions-item>
+      </n-descriptions>
+    </n-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { message } from '@/utils/naive'
+import { useSettingsStore } from '@/stores'
+import { Icons } from '@/config/icons'
 
-interface BasicSettings {
-  systemName: string
-  language: string
-  timezone: string
-}
+const settingsStore = useSettingsStore()
 
-interface NotificationSettings {
-  email: boolean
-  inApp: boolean
-  taskReminder: boolean
-  projectUpdate: boolean
-}
+const basicSettings = ref({ ...settingsStore.basic })
+const notificationSettings = ref({ ...settingsStore.notification })
+const securitySettings = ref({ ...settingsStore.security })
 
-interface SecuritySettings {
-  twoFactorAuth: boolean
-  sessionTimeout: string
-  passwordStrength: string
-}
+const languageOptions = [
+  { label: '中文', value: 'zh-CN' },
+  { label: 'English', value: 'en-US' }
+]
 
-const basicSettings = ref<BasicSettings>({
-  systemName: 'TeamFlowManager',
-  language: 'zh-CN',
-  timezone: 'UTC+8'
-})
+const timezoneOptions = [
+  { label: '北京时间 (UTC+8)', value: 'UTC+8' },
+  { label: 'UTC', value: 'UTC' }
+]
 
-const notificationSettings = ref<NotificationSettings>({
-  email: true,
-  inApp: true,
-  taskReminder: true,
-  projectUpdate: false
-})
+const timeoutOptions = [
+  { label: '30分钟', value: '30' },
+  { label: '1小时', value: '60' },
+  { label: '2小时', value: '120' },
+  { label: '4小时', value: '240' }
+]
 
-const securitySettings = ref<SecuritySettings>({
-  twoFactorAuth: false,
-  sessionTimeout: '60',
-  passwordStrength: 'medium'
-})
+const strengthOptions = [
+  { label: '低', value: 'low' },
+  { label: '中', value: 'medium' },
+  { label: '高', value: 'high' }
+]
 
-const saveBasicSettings = () => {
-  // 保存基本设置逻辑
-}
-
-const saveNotificationSettings = () => {
-  // 保存通知设置逻辑
-}
-
-const saveSecuritySettings = () => {
-  // 保存安全设置逻辑
+const saveAllSettings = () => {
+  settingsStore.updateBasic(basicSettings.value)
+  settingsStore.updateNotification(notificationSettings.value)
+  settingsStore.updateSecurity(securitySettings.value)
+  message.success('所有设置已保存')
 }
 </script>
 
 <style scoped>
 .settings-container {
-  padding: 20px;
+  padding: 0 4px;
 }
 
-.page-header {
-  margin-bottom: 20px;
+.card-header-icon {
+  display: flex;
+  width: 18px;
+  height: 18px;
+  color: #8c9aa8;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
+.settings-form {
+  margin-top: 8px;
 }
 
-.system-info {
-  margin-top: 20px;
+.settings-form .n-form-item {
+  margin-bottom: 18px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 22px;
-}
-
-:deep(.el-descriptions) {
-  margin-top: 0;
+.settings-form .n-form-item:last-child {
+  margin-bottom: 0;
 }
 </style>

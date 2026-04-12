@@ -47,6 +47,11 @@ const mockProjects: Project[] = [
 ]
 
 export const useProjectsStore = defineStore('projects', {
+  persist: {
+    key: 'projects-store',
+    paths: ['list']
+  },
+
   state: (): ProjectsState => ({
     list: mockProjects,
     loading: false,

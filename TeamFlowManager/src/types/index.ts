@@ -1,4 +1,4 @@
-export type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+export type TagType = 'default' | 'info' | 'success' | 'warning' | 'error'
 
 export interface UserInfo {
   id: number

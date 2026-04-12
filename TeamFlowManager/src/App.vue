@@ -1,5 +1,7 @@
 <template>
-  <RouterView />
+  <n-config-provider>
+    <RouterView />
+  </n-config-provider>
 </template>
 
 <script setup lang="ts">

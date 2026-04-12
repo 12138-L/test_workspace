@@ -87,6 +87,10 @@
     "watchEffect": true,
     "watchPostEffect": true,
     "watchSyncEffect": true,
-    "ElMessage": true
+    "ElMessage": true,
+    "useDialog": true,
+    "useLoadingBar": true,
+    "useMessage": true,
+    "useNotification": true
   }
 }

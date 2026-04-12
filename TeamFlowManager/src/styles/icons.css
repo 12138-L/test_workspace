@@ -1,0 +1,46 @@
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2;
+}
+
+.stat-icon span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+.collapse-btn .icon-btn,
+.icon-btn-wrapper .icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.n-menu-item .n-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.n-menu-item svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}

@@ -2,406 +2,322 @@
 
 ---
 
-## 🏛️ 整体架构
+## 🏛️ 真实项目架构
 
-### 1.1 架构分层图
+### 1.1 当前架构分层图
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        视图层 (Vue 3 Components)                     │
+│                        视图层 (Vue 3 + Naive UI)                     │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┬────────┐  │
-│  │ Dashboard│ Employee │ Document │ Calendar │ Reports  │ Settings │  │
-│  │   仪表盘  │  人员管理  │  文件管理  │  日历工时  │  报表中心  │  系统设置  │  │
+│  │ Login    │ Dashboard│ Projects │  Tasks   │   Team   │ Calendar│  │
+│  │   登录页  │  仪表板   │  项目管理  │  任务管理  │  团队管理  │  日历页   │  │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┴────────┘  │
+│  ┌──────────┐                                                        │
+│  │ Settings │                                                        │
+│  │  设置页   │                                                        │
+│  └──────────┘                                                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                        路由层 (Vue Router 4)                         │
 │                                                                     │
-│                        Composables Hooks                            │
-│  ┌──────────────┬──────────────┬──────────────┬──────────────┐     │
-│  │   useTable   │   useForm    │  useUpload   │   useAsync   │     │
-│  └──────────────┴──────────────┴──────────────┴──────────────┘     │
+│               - 导航守卫（认证检查）                                 │
+│               - 懒加载（待优化）                                      │
+│               - 页面过渡动画                                         │
 ├─────────────────────────────────────────────────────────────────────┤
 │                        状态层 (Pinia Stores)                        │
 │                                                                     │
 │  ┌──────────────┬──────────────┬──────────────┬──────────────┐     │
-│  │    user      │   employee   │   document   │  attendance  │     │
-│  │    app       │    tasks     │   calendar   │    upload    │     │
+│  │    user      │     app      │    tasks     │   projects   │     │
+│  │  用户状态    │  应用配置    │  任务状态    │  项目状态    │     │
 │  └──────────────┴──────────────┴──────────────┴──────────────┘     │
-│                         │                                           │
-│                    ┌─────▼─────┐                                     │
-│                    │  Persist  │  - 白名单持久化                      │
-│                    │  Plugin   │  - localStorage 同步               │
-│                    └───────────┘                                     │
+│                              │                                       │
+│                    ┌─────────▼──────────┐                            │
+│                    │ pinia-plugin-      │  - 白名单持久化            │
+│                    │ persistedstate     │  - localStorage 存储       │
+│                    └────────────────────┘                            │
 ├─────────────────────────────────────────────────────────────────────┤
-│                        服务层 (Service Layer)                        │
+│                        工具层 (Utils)                               │
 │                                                                     │
 │  ┌──────────────┬──────────────┬──────────────┬──────────────┐     │
-│  │   employee   │  workHourCalc│  fileService │  reportGen   │     │
-│  └──────────────┴──────────────┴──────────────┴──────────────┘     │
-│  ┌──────────────┬──────────────┬──────────────┬──────────────┐     │
-│  │   holiday    │     ocr      │ intelligence │  encryption  │     │
+│  │   naive.ts   │   格式化工具  │   常量定义   │   类型定义   │     │
+│  │  消息提示封装 │              │              │              │     │
 │  └──────────────┴──────────────┴──────────────┴──────────────┘     │
 ├─────────────────────────────────────────────────────────────────────┤
-│                      仓储层 (Repository Pattern)                     │
+│                        样式层 (Tailwind CSS)                        │
 │                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                     BaseRepository<T>                        │   │
-│  │  ─────────────────────────────────────────────────────────  │   │
-│  │  + create(item: T): Promise<T>                              │   │
-│  │  + update(id: ID, item: T): Promise<T>                      │   │
-│  │  + delete(id: ID): Promise<boolean>                         │   │
-│  │  + findById(id: ID): Promise<T | null>                      │   │
-│  │  + findAll(query?: Query): Promise<T[]>                     │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                      │
-│  ┌───────────────────────────┼───────────────────────────────────┐  │
-│  │                           │                                   │  │
-│  ▼                           ▼                                   ▼  │
-│  EmployeeRepo          DocumentRepo                       AttendanceRepo │
-├─────────────────────────────────────────────────────────────────────┤
-│                        数据层 (Dexie.js / IndexedDB)                 │
-│                                                                     │
-│  ┌──────────┬──────────┬──────────┬──────────┬──────────┬────────┐  │
-│  │employees │documents │attendance│  todos   │ holidays │ settings│  │
-│  │  人员表   │  文件表   │  考勤表   │  待办表   │  节假日表  │  配置表  │  │
-│  └──────────┴──────────┴──────────┴──────────┴──────────┴────────┘  │
-│                           Blob Storage                              │
-│                     文件二进制存储（最大 50MB/个）                    │
-├─────────────────────────────────────────────────────────────────────┤
-│                        并发层 (Web Workers)                          │
-│                                                                     │
-│  ┌──────────────┬──────────────┬──────────────┬──────────────┐     │
-│  │   Excel 解析  │  OCR 识别     │  大文件处理   │  报表计算     │     │
-│  └──────────────┴──────────────┴──────────────┴──────────────┘     │
+│                      - Naive UI 主题定制                            │
+│                      - 原子化工具类                                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧩 核心设计模式
+## 🧩 核心技术栈
 
-### 2.1 仓储模式 (Repository Pattern)
+### 2.1 前端框架与构建
 
-**为什么使用仓储模式？**
+| 技术 | 选型 | 版本 | 说明 |
+|------|------|------|------|
+| **核心框架** | Vue 3 | 3.4.x | Composition API + `<script setup>` |
+| **构建工具** | Vite | 5.x | 极速开发体验 |
+| **类型系统** | TypeScript | 5.x | 完整类型覆盖 |
+| **语言特性** | unplugin-auto-import | 0.17.x | Vue/refs 等自动导入 |
 
-| 优势 | 说明 |
-|------|------|
-| ✅ **数据层可替换** | 未来从 IndexedDB 切换到 SQLite 或后端 API，上层代码无感知 |
-| ✅ **统一查询接口** | 所有表都用相同的 CRUD 方法 |
-| ✅ **业务逻辑复用** | Service 层不关心数据存储细节 |
-| ✅ **易于单元测试** | 可以 Mock Repository 接口 |
+### 2.2 UI 组件库
 
-**代码示例：**
+> **⚠️ 注意：与设计文档不同，实际使用 Naive UI**
 
-```typescript
-// 接口定义
-interface IRepository<T, ID> {
-  create(item: Omit<T, 'id'>): Promise<T>
-  update(id: ID, item: Partial<T>): Promise<T>
-  delete(id: ID): Promise<boolean>
-  findById(id: ID): Promise<T | null>
-  findAll(options?: FindOptions<T>): Promise<T[]>
-}
+| 技术 | 选型 | 说明 |
+|------|------|------|
+| **UI 框架** | Naive UI | 2.38.x | Vue 3 生态，主题一致性好 |
+| **自动导入** | unplugin-vue-components | 0.25.x | NaiveUiResolver 按需解析 |
+| **样式系统** | Tailwind CSS | 3.x | 原子化样式与组件结合 |
 
-// 基类实现
-abstract class DexieRepository<T, ID> implements IRepository<T, ID> {
-  constructor(protected readonly table: Dexie.Table<T, ID>) {}
-  
-  // 所有方法的统一实现
-}
+### 2.3 状态管理与路由
 
-// 具体仓储
-class EmployeeRepository 
-  extends DexieRepository<Employee, number> {
-  
-  // 员工专用查询方法
-  findByDepartment(departmentId: number): Promise<Employee[]> {
-    return this.table
-      .where('departmentId')
-      .equals(departmentId)
-      .toArray()
-  }
-}
-```
+| 技术 | 选型 | 说明 |
+|------|------|------|
+| **状态管理** | Pinia | 2.x | Vue 3 官方推荐 |
+| **持久化** | pinia-plugin-persistedstate | 3.x | localStorage 同步 |
+| **路由** | Vue Router | 4.x | 路径导航与守卫 |
+
+### 2.4 工具与质量保证
+
+| 技术 | 选型 | 说明 |
+|------|------|------|
+| **代码规范** | ESLint + Prettier | Standard 规范 |
+| **Git Hooks** | simple-git-hooks | 提交前检查 |
+| **工具库** | @vueuse/core | 10.x | 常用组合式工具 |
 
 ---
 
-### 2.2 服务层设计原则
-
-**单一职责：一个 Service 只做一件事**
-
-| 服务 | 职责范围 |
-|------|---------|
-| `WorkHourCalculator` | 只做工时计算，不做数据存储 |
-| `ReportGenerator` | 只做报表生成，不关心数据来源 |
-| `OcrService` | 只做 OCR 识别，返回结构化数据 |
-| `EncryptionService` | 只做加密解密，纯算法 |
-
-**反模式警示：** ❌ 不要在 Service 中直接操作 DOM
-**正确模式：** ✅ Service 是纯函数，输入 → 输出
-
----
-
-### 2.3 Store 分层设计
-
-**Pinia Store 三层职责清晰分离：**
-
-```typescript
-// ============== State ==============
-// 只放最小必要状态，能计算的不放这里
-state: () => ({
-  list: [],
-  loading: false,
-  selectedId: null
-})
-
-// ============== Getters ==============
-// 所有派生状态，全部缓存
-getters: {
-  activeCount: state => 
-    state.list.filter(e => e.status === 'active').length,
-  
-  byDepartment: state => (deptId: number) => 
-    state.list.filter(e => e.departmentId === deptId),
-  
-  stats: state => ({
-    total: state.list.length,
-    active: this.activeCount,  // getter 复用 getter
-    inactive: state.list.length - this.activeCount
-  })
-}
-
-// ============== Actions ==============
-// 只做状态变更，不包含复杂业务逻辑
-actions: {
-  async fetchAll() {
-    this.loading = true
-    try {
-      // ✅ 复杂业务逻辑委托给 Service
-      this.list = await EmployeeService.calculateSomething(
-        await employeeRepo.findAll()
-      )
-    } finally {
-      this.loading = false
-    }
-  }
-}
-```
-
----
-
-## 🔐 状态持久化设计
-
-### 3.1 持久化白名单
-
-| Store | 持久化策略 | 说明 |
-|-------|-----------|------|
-| `user` | ✅ 全量持久化 | 登录状态、用户信息 |
-| `app` | ✅ 全量持久化 | 侧边栏状态、主题配置 |
-| `employee` | ❌ 不持久化 | 从 IndexedDB 读取 |
-| `document` | ❌ 不持久化 | 文件数据量大 |
-| `tasks` | ⚠️ 部分持久化 | 只存筛选条件 |
-| `upload` | ❌ 不持久化 | 上传上下文临时状态 |
-
-### 3.2 登录时序终极解决方案
-
-**问题根源：Pinia 持久化插件异步写入**
-
-```text
-┌───────────────────────────────────────────────────────────┐
-│               ❌  旧方案 - 时序问题根源                     │
-├───────────────────────────────────────────────────────────┤
-│                                                           │
-│  1. userStore.login() 更新内存状态                         │
-│  2. Pinia 插件 「稍后」写入微任务队列                      │
-│  3. ✋ 问题在这里！                                        │
-│  4. router.push('/dashboard') 立即执行                     │
-│  5. 路由守卫读 localStorage → 还没写进去！！                │
-│  6. 跳回登录页 ❌                                          │
-└───────────────────────────────────────────────────────────┘
-```
-
-```text
-┌───────────────────────────────────────────────────────────┐
-│               ✅  终极方案 - 三重保障机制                   │
-├───────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  第一层：Login 组件手动同步写入                        │  │
-│  │  localStorage.setItem(...)                          │  │
-│  │  → 同步、阻塞、100% 写入完成才返回                    │  │
-│  └───────────────────────┬─────────────────────────────┘  │
-│                          ↓                                │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  第二层：Store 内部调用 $persist()                   │  │
-│  │  → 强制插件立即执行，不等待微任务                     │  │
-│  └───────────────────────┬─────────────────────────────┘  │
-│                          ↓                                │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  第三层：路由守卫容错                                │  │
-│  │  try-catch + 布尔强转 !!                            │
-│  │  → 异常情况下默认为未登录                           │  │
-│  └─────────────────────────────────────────────────────┘  │
-│                                                           │
-│  ✅  100% 跳转成功率！没有任何时序问题                      │
-└───────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📦 性能优化架构
-
-### 4.1 三级缓存策略
-
-| 缓存层级 | 位置 | 适用场景 | TTL |
-|---------|------|---------|-----|
-| L1 一级 | Pinia Store | 当前会话高频访问 | 页面生命周期 |
-| L2 二级 | IndexedDB | 结构化数据持久化 | 永久（用户手动清理）|
-| L3 三级 | Memory Cache | Service 层计算结果 | 单次请求 |
-
-**缓存更新策略：**
-```
-用户操作 → 更新 Store → 写入 IndexedDB → 双向同步
-```
-
-### 4.2 Web Worker 并发架构
-
-**主线程只做两件事：**
-1. UI 渲染与用户交互
-2. State 状态更新
-
-**所有耗时操作全部移到 Worker：**
-
-| 操作 | 线程 | 预计耗时 | 阻塞 UI？ |
-|------|------|---------|----------|
-| Excel 1000 行解析 | Worker | 500ms | ❌ 不阻塞 |
-| OCR 发票识别 | Worker | 3-5s | ❌ 不阻塞 |
-| 报表复杂计算 | Worker | 200ms | ❌ 不阻塞 |
-| 大文件 Hash | Worker | 1s/100MB | ❌ 不阻塞 |
-| DOM 渲染 | 主线程 | - | - |
-
----
-
-## 🎨 组件设计规范
-
-### 5.1 组件分层原则
+## 📁 真实目录结构
 
 ```
 src/
-├── components/
-│   ├── base/              # 基础原子组件
-│   │   ├── TheButton.vue
-│   │   ├── TheCard.vue
-│   │   └── StatusTag.vue
-│   ├── business/          # 业务通用组件
-│   │   ├── EmployeeSelector.vue
-│   │   ├── FileUploader.vue
-│   │   └── DateRangePicker.vue
-│   └── composables/       # 可复用逻辑
-│       ├── useTable.ts
-│       ├── useForm.ts
-│       └── useAsync.ts
-```
-
-### 5.2 组件边界
-
-**✅ 页面组件可以：**
-- 注入 Store
-- 调用 Service
-- 处理路由跳转
-
-**✅ 业务组件可以：**
-- 接收 props
-- 抛出 events
-- 维护内部状态
-
-**❌ 所有组件禁止：**
-- 直接操作 localStorage
-- 直接调用 IndexedDB
-- 包含复杂业务计算
-
----
-
-## 🔄 数据流规范
-
-### 6.1 标准数据流
-
-```
-                  用户点击按钮
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│           Page 页面组件                              │
-│  - 调用 Store action                                │
-│  - 处理加载状态                                      │
-│  - 显示成功/失败提示                                 │
-└───────────────────┬─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│           Pinia Store                               │
-│  - 更新 loading 状态                                │
-│  - 调用 Service 处理业务逻辑                         │
-│  - 调用 Repository 读写数据                         │
-│  - 更新 State → 视图自动响应                        │
-└───────────────────┬─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│           Service / Repository                      │
-│  - 纯函数计算，无副作用                              │
-│  - 与框架无关，可单独测试                            │
-└─────────────────────────────────────────────────────┘
+├── layouts/              # 布局组件
+│   └── Layout.vue        # 主布局：顶部导航 + 侧边栏 + 内容区
+│
+├── router/
+│   └── index.ts          # 路由配置与导航守卫
+│
+├── stores/               # Pinia 状态模块
+│   ├── index.ts          # Store 统一导出
+│   ├── user.ts           # 用户认证与信息（全量持久化）
+│   ├── app.ts            # 应用配置（侧边栏等）
+│   ├── tasks.ts          # 任务状态管理
+│   └── projects.ts       # 项目状态管理
+│
+├── views/                # 页面级组件
+│   ├── Login.vue         # 登录页面
+│   ├── Dashboard.vue     # 数据看板
+│   ├── Projects.vue      # 项目管理
+│   ├── Tasks.vue         # 任务管理
+│   ├── Team.vue          # 团队管理
+│   ├── Calendar.vue      # 日历页面
+│   └── Settings.vue      # 系统设置
+│
+├── types/
+│   └── index.ts          # TypeScript 类型定义
+│
+├── utils/
+│   └── naive.ts          # Naive UI 消息/对话框封装
+│
+├── styles/
+│   └── tailwind.css      # Tailwind 基础样式
+│
+├── App.vue               # 根组件
+└── main.ts               # 应用入口
 ```
 
 ---
 
-## 🛡️ 类型安全架构
+## 🧠 Store 设计与状态流转
 
-### 7.1 四层类型保障
+### 3.1 现有 Store 分析
 
-| 层级 | 保障手段 | 覆盖率目标 |
-|------|---------|-----------|
-| 编译时 | TypeScript 严格模式 | 100% |
-| Store 层 | Pinia + Interface | 100% |
-| Service 层 | 函数参数 + 返回值类型 | 100% |
-| 运行时 | Zod Schema 校验 | 80% |
+#### ✅ userStore - 用户认证模块
+**持久化：全量持久化到 localStorage**
 
-### 7.2 any 零容忍政策
+```typescript
+state: {
+  token: string               // 模拟令牌
+  userInfo: UserInfo | null   // 用户信息
+  isAuthenticated: boolean    // 认证状态
+}
 
-**允许使用 any 的唯一场景：**
-- 与第三方库交互边界
-- `catch (_error: any)` 异常捕获
-- 必须添加 `// eslint-disable-next-line` 说明
+getters:
+  ├─ username   → 显示名称
+  ├─ avatar     → 头像 URL
+  └─ userRole   → 用户角色
 
-**禁止场景：**
-- 业务代码变量声明
-- 函数参数类型
-- 返回值类型
+actions:
+  ├─ login()    → 异步登录（模拟 800ms 延迟）
+  ├─ logout()   → 退出清理状态
+  └─ refreshUserInfo() → 刷新用户信息
+```
 
----
-
-## 📝 架构决策记录 (ADR)
-
-### ADR-001: 选择 Dexie.js 而不是 localStorage
-**日期：2026-04-10**
-- 背景：localStorage 容量限制 5MB，且不支持查询
-- 决策：使用 Dexie.js 封装 IndexedDB
-- 后果：支持 1GB 数据，支持事务与高级查询
-
-### ADR-002: 不使用后端，纯前端实现
-**日期：2026-04-08**
-- 背景：团队管理工具多为单用户场景
-- 决策：纯前端 PWA 架构
-- 后果：部署成本为 0，数据绝对安全，离线可用
-
-### ADR-003: 登录状态手动同步
-**日期：2026-04-10**
-- 背景：Pinia 持久化插件异步写入造成时序问题
-- 决策：手动同步 localStorage，三层保障
-- 后果：100% 跳转成功率，代码稍微冗余但可靠
+**设计优点：**
+- 登录时序控制完善
+- 状态清理彻底
+- 与路由联动良好
 
 ---
 
-> **架构原则总结：**  
-> 简单胜于灵活，可靠胜于完美，性能胜于优雅。  
-> 所有架构决策都围绕「用户体验」和「代码可维护性」展开。
+#### ✅ appStore - 应用配置模块
+**持久化：全量持久化**
+
+```typescript
+state: {
+  sidebarCollapsed: boolean   // 侧边栏折叠状态
+}
+
+getters:
+  └─ sidebarWidth → 动态计算宽度
+
+actions:
+  ├─ toggleSidebar()      → 切换折叠
+  └─ setSidebarCollapsed()
+```
+
+**优化建议：** 可扩展主题配置、语言切换等全局设置
+
+---
+
+#### ✅ tasksStore - 任务管理模块
+**持久化：仅 `list` 字段持久化**
+
+```typescript
+state: {
+  list: Task[]
+  loading: boolean
+  searchKeyword: string
+  statusFilter: string | null
+}
+
+getters:
+  ├─ filteredTasks  → 搜索+筛选组合
+  ├─ pendingTasks   → 各状态分类统计
+  ├─ inProgressTasks
+  ├─ completedTasks
+  ├─ overdueTasks
+  └─ stats          → 汇总统计对象
+
+actions:
+  ├─ setSearchKeyword()
+  ├─ setStatusFilter()
+  ├─ fetchTasks()
+  ├─ addTask()
+  ├─ updateTask()
+  └─ deleteTask()
+```
+
+**问题点：**
+- ❌ Mock 数据与业务代码混合
+- ❌ 筛选逻辑在 getter 中执行，每次访问都重新计算
+- ❌ 没有分页/虚拟滚动优化
+
+---
+
+#### ✅ projectsStore - 项目管理模块
+**持久化：默认无持久化（当前 list 硬编码在文件中）**
+
+```typescript
+state: {
+  list: Project[]
+  loading: boolean
+  currentProject: Project | null
+}
+
+getters:
+  ├─ activeProjects
+  ├─ completedProjects
+  ├─ totalCount
+  └─ getProjectById() → 函数式 getter
+
+actions:
+  ├─ fetchProjects()  → 模拟异步加载
+  ├─ addProject()
+  ├─ updateProject()
+  ├─ deleteProject()
+  └─ setCurrentProject()
+```
+
+---
+
+### 3.2 状态持久化策略
+
+| Store | 持久化范围 | 存储位置 | 说明 |
+|-------|-----------|---------|------|
+| `user` | ✅ 全量 | localStorage | 登录状态必须保留 |
+| `app` | ✅ 全量 | localStorage | 用户偏好 |
+| `tasks` | ✅ `list` 字段 | localStorage | 任务数据 |
+| `projects` | ❌ 无 | - | 当前 Mock 数据不持久化 |
+
+> **⚠️ 风险提示：** localStorage 只有约 5MB 存储空间，超过 1000 条记录建议迁移到 IndexedDB
+
+---
+
+## 🎯 布局系统设计
+
+### 4.1 主布局结构
+
+```
+Layout.vue
+├── NLayoutHeader (64px)
+│   ├── 左侧：折叠按钮 + Logo
+│   └── 右侧：通知 + 用户下拉菜单
+│
+├── NLayout (has-sider)
+│   ├── NLayoutSider
+│   │   └── NMenu (6 个主菜单项)
+│   │
+│   └── NLayoutContent
+│       └── router-view + fade-transform 过渡
+```
+
+### 4.2 响应式断点
+
+| 断点 | 侧边栏行为 | 内容区布局 |
+|------|-----------|-----------|
+| > 1200px | 默认展开 | 多列网格 |
+| 768px - 1200px | 默认展开 | 减少列数 |
+| < 768px | 默认折叠 | 单列布局 |
+
+---
+
+## 🚀 架构优化路线图
+
+### 5.1 数据层演进
+
+```
+当前：localStorage
+    ↓ （1000 条数据临界值）
+下一步：Dexie.js + IndexedDB
+    ↓ （支持 Blob 存储）
+未来：支持可选云端同步
+```
+
+### 5.2 分层演进
+
+```
+当前：Store → View
+    ↓
+下一步：Repository → Service → Store → View
+    ↓
+未来：+ Web Worker 并发层
+```
+
+---
+
+## ⚠️ 技术债务清单
+
+| 优先级 | 问题 | 影响范围 | 建议修复时间 |
+|--------|------|---------|-------------|
+| 🔴 高 | Mock 数据硬编码在 Store 中 | tasks/projects | 立即 |
+| 🔴 高 | 缺少统一错误处理机制 | 所有异步操作 | 立即 |
+| 🔴 高 | 路由未启用懒加载 | 首屏性能 | 本周 |
+| 🟡 中 | 表格无虚拟滚动 | > 100 行数据 | 本月 |
+| 🟡 中 | 缺少 composables 复用逻辑 | 代码重复率 | 本月 |
+| 🟢 低 | 过渡动画 CSS 未定义 | 用户体验 | 按需 |

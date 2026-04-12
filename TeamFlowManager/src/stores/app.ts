@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import type { AppConfig } from '@/types'
 
 export const useAppStore = defineStore('app', {
+  persist: {
+    key: 'app-store'
+  },
+
   state: (): AppConfig => ({
     sidebarCollapsed: false
   }),
@@ -17,7 +21,5 @@ export const useAppStore = defineStore('app', {
     setSidebarCollapsed(collapsed: boolean) {
       this.sidebarCollapsed = collapsed
     }
-  },
-
-  persist: true
+  }
 })
