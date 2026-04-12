@@ -36,18 +36,21 @@ export const useProjectsStore = defineStore('projects', {
 
     async addProject(project: Omit<Project, 'id'>) {
       const id = await projectsRepo.create(project)
-      await this.fetchProjects()
+      const newProject = { ...project, id } as Project
+      this.list = [...this.list, newProject]
       return id
     },
 
     async updateProject(id: number, updates: Partial<Project>) {
       await projectsRepo.update(id, updates)
-      await this.fetchProjects()
+      this.list = this.list.map(p =>
+        p.id === id ? { ...p, ...updates } : p
+      )
     },
 
     async deleteProject(id: number) {
       await projectsRepo.delete(id)
-      await this.fetchProjects()
+      this.list = this.list.filter(p => p.id !== id)
     },
 
     setCurrentProject(project: Project) {

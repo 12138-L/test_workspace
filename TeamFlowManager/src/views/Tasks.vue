@@ -29,7 +29,7 @@
         <div class="card-header">
           <span>任务列表</span>
           <n-input
-            v-model:value="tasksStore.searchKeyword"
+            v-model:value="localSearch"
             placeholder="搜索任务"
             style="width: 240px"
             clearable
@@ -50,6 +50,10 @@
             striped
             virtual-scroll
             :max-height="550"
+            :row-properties="(row: Task) => ({
+              style: 'cursor: pointer',
+              onClick: () => handleEdit(row)
+            })"
           >
             <template #empty>
               <DataTableEmpty
@@ -103,8 +107,8 @@
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSubmit">确定</n-button>
+          <n-button @click="showModal = false" :disabled="submitting">取消</n-button>
+          <n-button type="primary" @click="handleSubmit" :loading="submitting">确定</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -113,7 +117,7 @@
 
 <script setup lang="ts">
 import type { DataTableColumns, SelectOption } from 'naive-ui'
-import { h, ref, onMounted } from 'vue'
+import { h, ref, onMounted, watch } from 'vue'
 import { message, dialog } from '@/utils/naive'
 import type { Task } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
@@ -123,13 +127,23 @@ import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
 
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timer: number
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer)
+    timer = window.setTimeout(() => fn(...args), delay)
+  }
+}
+
 const tasksStore = useTasksStore()
 
 const viewMode = ref<'list' | 'kanban'>('kanban')
 const showModal = ref(false)
 const editingTask = ref<Task | null>(null)
+const localSearch = ref('')
+const submitting = ref(false)
 
-const formData = ref({
+const defaultFormData = {
   title: '',
   description: '',
   remark: '',
@@ -138,7 +152,14 @@ const formData = ref({
   status: '待开始' as Task['status'],
   startTime: null as number | null,
   dueDate: null as number | null
-})
+}
+
+const formData = ref({ ...defaultFormData })
+
+function resetForm() {
+  editingTask.value = null
+  formData.value = { ...defaultFormData }
+}
 
 const pagination = {
   pageSize: 10
@@ -232,17 +253,7 @@ const columns: DataTableColumns<Task> = [
 ]
 
 function handleCreateTask() {
-  editingTask.value = null
-  formData.value = {
-    title: '',
-    description: '',
-    remark: '',
-    assignee: '',
-    priority: '中' as Task['priority'],
-    status: '待开始' as Task['status'],
-    startTime: null as number | null,
-    dueDate: null as number | null
-  }
+  resetForm()
   showModal.value = true
 }
 
@@ -295,30 +306,57 @@ async function handleStatusChange(taskId: number, newStatus: Task['status']) {
 }
 
 async function handleSubmit() {
-  if (!formData.value.title.trim()) {
+  if (submitting.value) return
+  
+  const title = formData.value.title?.trim()
+  if (!title) {
     message.warning('请输入任务标题')
     return
   }
 
-  const submitData = {
-    ...formData.value,
-    startTime: formatTimestamp(formData.value.startTime as number | null),
-    dueDate: formatTimestamp(formData.value.dueDate as number | null)
-  }
+  submitting.value = true
+  try {
+    const submitData = {
+      ...formData.value,
+      title,
+      description: formData.value.description?.trim() || '',
+      remark: formData.value.remark?.trim() || '',
+      assignee: formData.value.assignee?.trim() || '',
+      startTime: formatTimestamp(formData.value.startTime as number | null),
+      dueDate: formatTimestamp(formData.value.dueDate as number | null)
+    }
 
-  if (editingTask.value) {
-    await tasksStore.updateTask(editingTask.value.id, submitData)
-    message.success('任务已更新')
-  } else {
-    await tasksStore.addTask(submitData)
-    message.success('任务创建成功')
-  }
+    if (editingTask.value) {
+      await tasksStore.updateTask(editingTask.value.id, submitData)
+      message.success('任务已更新')
+    } else {
+      await tasksStore.addTask(submitData)
+      message.success('任务创建成功')
+    }
 
-  showModal.value = false
+    showModal.value = false
+  } finally {
+    submitting.value = false
+  }
 }
 
 onMounted(() => {
   tasksStore.fetchTasks()
+  localSearch.value = tasksStore.searchKeyword
+})
+
+const setSearchDebounced = debounce((value: string) => {
+  tasksStore.setSearchKeyword(value)
+}, 300)
+
+watch(localSearch, (value) => {
+  setSearchDebounced(value)
+})
+
+watch(showModal, (open) => {
+  if (!open) {
+    resetForm()
+  }
 })
 </script>
 

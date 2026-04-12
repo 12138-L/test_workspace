@@ -183,18 +183,37 @@ function handleDrop(newStatus: Task['status']) {
 
 .task-card {
   background: #fff;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   border: 1px solid #e5e6eb;
   cursor: grab;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.task-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #18a0fb, #63e2b7);
+  opacity: 0;
+  transition: opacity 0.25s;
 }
 
 .task-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(24, 160, 251, 0.15);
   border-color: #18a0fb;
+  transform: translateY(-2px);
+}
+
+.task-card:hover::before {
+  opacity: 1;
 }
 
 .task-card.dragging {
@@ -299,32 +318,33 @@ function handleDrop(newStatus: Task['status']) {
 }
 
 .task-remark {
-  margin-top: 6px;
+  margin-top: 8px;
   padding: 6px 8px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  border-radius: 4px;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  border-left: 3px solid #fa8c16;
+  border-radius: 0 4px 4px 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  cursor: pointer;
   transition: all 0.2s;
 }
 
 .task-remark:hover {
-  background: #ffe7ba;
-  border-color: #ffc069;
+  background: linear-gradient(135deg, #ffe7ba 0%, #ffd591 100%);
+  transform: translateX(2px);
 }
 
 .task-remark .remark-badge {
   font-size: 12px;
-  line-height: 1;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .task-remark .remark-text {
   flex: 1;
   font-size: 11px;
-  color: #d46b08;
+  color: #ad4e00;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

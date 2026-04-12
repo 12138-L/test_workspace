@@ -38,18 +38,21 @@ export const useTeamStore = defineStore('team', {
 
     async addMember(member: Omit<TeamMember, 'id'>) {
       const id = await teamRepo.create(member)
-      await this.fetchTeam()
+      const newMember = { ...member, id } as TeamMember
+      this.list = [...this.list, newMember]
       return id
     },
 
     async updateMember(id: number, updates: Partial<TeamMember>) {
       await teamRepo.update(id, updates)
-      await this.fetchTeam()
+      this.list = this.list.map(m =>
+        m.id === id ? { ...m, ...updates } : m
+      )
     },
 
     async deleteMember(id: number) {
       await teamRepo.delete(id)
-      await this.fetchTeam()
+      this.list = this.list.filter(m => m.id !== id)
     },
 
     async clearAll() {
