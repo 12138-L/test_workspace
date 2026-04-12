@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Project } from '@/types'
+import { projectsRepo } from '@/db/repository'
 
 interface ProjectsState {
   list: Project[]
@@ -7,53 +8,9 @@ interface ProjectsState {
   currentProject: Project | null
 }
 
-const mockProjects: Project[] = [
-  {
-    id: 1,
-    name: '电商平台重构',
-    manager: '张三',
-    status: '进行中',
-    progress: 65,
-    startDate: '2024-01-01',
-    endDate: '2024-03-31'
-  },
-  {
-    id: 2,
-    name: '移动端APP开发',
-    manager: '李四',
-    status: '进行中',
-    progress: 30,
-    startDate: '2024-01-15',
-    endDate: '2024-04-30'
-  },
-  {
-    id: 3,
-    name: '数据中台建设',
-    manager: '王五',
-    status: '已暂停',
-    progress: 45,
-    startDate: '2023-12-01',
-    endDate: '2024-02-29'
-  },
-  {
-    id: 4,
-    name: 'CRM系统升级',
-    manager: '赵六',
-    status: '已完成',
-    progress: 100,
-    startDate: '2023-11-01',
-    endDate: '2024-01-15'
-  }
-]
-
 export const useProjectsStore = defineStore('projects', {
-  persist: {
-    key: 'projects-store',
-    paths: ['list']
-  },
-
   state: (): ProjectsState => ({
-    list: mockProjects,
+    list: [],
     loading: false,
     currentProject: null
   }),
@@ -70,35 +27,41 @@ export const useProjectsStore = defineStore('projects', {
   actions: {
     async fetchProjects() {
       this.loading = true
-      return new Promise(resolve => {
-        setTimeout(() => {
-          this.loading = false
-          resolve(this.list)
-        }, 500)
-      })
-    },
-
-    addProject(project: Omit<Project, 'id'>) {
-      const newId = Math.max(...this.list.map(p => p.id), 0) + 1
-      this.list.push({
-        id: newId,
-        ...project
-      })
-    },
-
-    updateProject(id: number, updates: Partial<Project>) {
-      const index = this.list.findIndex(p => p.id === id)
-      if (index !== -1) {
-        this.list[index] = { ...this.list[index], ...updates }
+      try {
+        this.list = await projectsRepo.getAll()
+      } finally {
+        this.loading = false
       }
     },
 
-    deleteProject(id: number) {
-      this.list = this.list.filter(p => p.id !== id)
+    async addProject(project: Omit<Project, 'id'>) {
+      const id = await projectsRepo.create(project)
+      await this.fetchProjects()
+      return id
+    },
+
+    async updateProject(id: number, updates: Partial<Project>) {
+      await projectsRepo.update(id, updates)
+      await this.fetchProjects()
+    },
+
+    async deleteProject(id: number) {
+      await projectsRepo.delete(id)
+      await this.fetchProjects()
     },
 
     setCurrentProject(project: Project) {
       this.currentProject = project
+    },
+
+    async clearAll() {
+      await projectsRepo.clear()
+      this.list = []
+    },
+
+    async bulkCreate(projects: Array<Omit<Project, 'id'>>) {
+      await projectsRepo.bulkCreate(projects)
+      await this.fetchProjects()
     }
   }
 })

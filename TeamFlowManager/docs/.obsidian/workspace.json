@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "design.md",
+                "file": "ARCHITECTURE.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "design"
+              "title": "ARCHITECTURE"
             }
           }
         ]
@@ -185,6 +185,8 @@
   },
   "active": "9a66933b7836184f",
   "lastOpenFiles": [
+    "README.md",
+    "design.md",
     "design.md.md"
   ]
 }

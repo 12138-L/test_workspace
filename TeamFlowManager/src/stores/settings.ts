@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { settingsRepo } from '@/db/repository'
 
 interface SettingsState {
   basic: {
@@ -19,45 +20,78 @@ interface SettingsState {
   }
 }
 
-export const useSettingsStore = defineStore('settings', {
-  persist: {
-    key: 'settings-store'
+const defaults: SettingsState = {
+  basic: {
+    systemName: 'TeamFlow Manager',
+    language: 'zh-CN',
+    timezone: 'UTC+8'
   },
+  notification: {
+    email: true,
+    inApp: true,
+    taskReminder: true,
+    projectUpdate: true
+  },
+  security: {
+    twoFactorAuth: false,
+    sessionTimeout: '60',
+    passwordStrength: 'medium'
+  }
+}
 
-  state: (): SettingsState => ({
-    basic: {
-      systemName: 'TeamFlow Manager',
-      language: 'zh-CN',
-      timezone: 'UTC+8'
-    },
-    notification: {
-      email: true,
-      inApp: true,
-      taskReminder: true,
-      projectUpdate: true
-    },
-    security: {
-      twoFactorAuth: false,
-      sessionTimeout: '60',
-      passwordStrength: 'medium'
-    }
-  }),
+export const useSettingsStore = defineStore('settings', {
+  state: (): SettingsState => ({ ...defaults }),
 
   actions: {
-    updateBasic(settings: Partial<SettingsState['basic']>) {
+    async loadFromStorage() {
+      const records = await settingsRepo.getAll()
+      if (records.length === 0) return
+
+      records.forEach(record => {
+        if (record.type === 'basic') {
+          this.basic = { ...this.basic, ...record }
+        } else if (record.type === 'notification') {
+          this.notification = { ...this.notification, ...record }
+        } else if (record.type === 'security') {
+          this.security = { ...this.security, ...record }
+        }
+      })
+    },
+
+    async saveByType(type: 'basic' | 'notification' | 'security', data: any) {
+      const records = await settingsRepo.getAll()
+      const existing = records.find(r => r.type === type)
+      const saveData = { ...data, type }
+
+      if (existing) {
+        await settingsRepo.update(existing.id!, saveData)
+      } else {
+        await settingsRepo.create(saveData)
+      }
+    },
+
+    async updateBasic(settings: Partial<SettingsState['basic']>) {
       this.basic = { ...this.basic, ...settings }
+      await this.saveByType('basic', this.basic)
     },
 
-    updateNotification(settings: Partial<SettingsState['notification']>) {
+    async updateNotification(settings: Partial<SettingsState['notification']>) {
       this.notification = { ...this.notification, ...settings }
+      await this.saveByType('notification', this.notification)
     },
 
-    updateSecurity(settings: Partial<SettingsState['security']>) {
+    async updateSecurity(settings: Partial<SettingsState['security']>) {
       this.security = { ...this.security, ...settings }
+      await this.saveByType('security', this.security)
     },
 
-    resetAll() {
-      this.$reset()
+    async resetAll() {
+      this.$patch({ ...defaults })
+      await Promise.all([
+        this.saveByType('basic', this.basic),
+        this.saveByType('notification', this.notification),
+        this.saveByType('security', this.security)
+      ])
     }
   }
 })

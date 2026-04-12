@@ -12,14 +12,25 @@
     </n-page-header>
 
     <n-card style="margin-top: 20px">
-      <n-data-table
-        :columns="columns"
-        :data="projectsStore.list"
-        :pagination="pagination"
-        striped
-        virtual-scroll
-        :max-height="500"
-      />
+      <n-spin :show="projectsStore.loading" description="加载中...">
+        <n-data-table
+          :columns="columns"
+          :data="projectsStore.list"
+          :pagination="pagination"
+          striped
+          virtual-scroll
+          :max-height="500"
+        >
+          <template #empty>
+            <DataTableEmpty
+              title="暂无项目"
+              description="点击下方按钮创建第一个项目"
+              create-text="新建项目"
+              @create="handleCreateProject"
+            />
+          </template>
+        </n-data-table>
+      </n-spin>
     </n-card>
 
     <n-modal v-model:show="showModal" preset="card" :title="editingProject ? '编辑项目' : '新建项目'" style="width: 500px">
@@ -57,14 +68,20 @@
 
 <script setup lang="ts">
 import type { DataTableColumns } from 'naive-ui'
-import { h, ref } from 'vue'
+import { h, ref, onMounted } from 'vue'
 import type { Project } from '@/types'
 import { useProjectsStore } from '@/stores/projects'
 import { message, dialog } from '@/utils/naive'
 import { getStatusType, getProgressColor } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import DataTableActions from '@/components/DataTableActions.vue'
+import DataTableEmpty from '@/components/DataTableEmpty.vue'
 
 const projectsStore = useProjectsStore()
+
+onMounted(() => {
+  projectsStore.fetchProjects()
+})
 
 const pagination = {
   pageSize: 10
@@ -129,32 +146,13 @@ const columns: DataTableColumns<Project> = [
   {
     title: '操作',
     key: 'actions',
-    width: 140,
+    width: 100,
     fixed: 'right',
-    render: (row: Project) => [
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleEdit(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.edit,
-              style: 'display: flex; width: 16px; height: 16px'
-            })
-        }
-      ),
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleDelete(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.delete,
-              style: 'display: flex; width: 16px; height: 16px; color: #d03050'
-            })
-        }
-      )
-    ]
+    render: (row: Project) =>
+      h(DataTableActions, {
+        onEdit: () => handleEdit(row),
+        onDelete: () => handleDelete(row)
+      })
   }
 ]
 
@@ -183,24 +181,24 @@ function handleDelete(project: Project) {
     content: `确定要删除项目「${project.name}」吗？此操作不可恢复。`,
     positiveText: '删除',
     negativeText: '取消',
-    onPositiveClick: () => {
-      projectsStore.deleteProject(project.id)
+    onPositiveClick: async () => {
+      await projectsStore.deleteProject(project.id)
       message.success(`项目「${project.name}」已删除`)
     }
   })
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!formData.value.name.trim()) {
     message.warning('请输入项目名称')
     return
   }
 
   if (editingProject.value) {
-    projectsStore.updateProject(editingProject.value.id, formData.value)
+    await projectsStore.updateProject(editingProject.value.id, formData.value)
     message.success('项目已更新')
   } else {
-    projectsStore.addProject(formData.value)
+    await projectsStore.addProject(formData.value)
     message.success('项目创建成功')
   }
 

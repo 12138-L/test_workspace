@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { UserInfo, LoginForm } from '@/types'
 import router from '@/router'
 import { message, loadingBar } from '@/utils/naive'
+import { userRepo } from '@/db/repository'
 
 interface UserState {
   token: string
@@ -10,11 +11,6 @@ interface UserState {
 }
 
 export const useUserStore = defineStore('user', {
-  persist: {
-    key: 'user-store',
-    paths: ['token', 'userInfo', 'isAuthenticated']
-  },
-
   state: (): UserState => ({
     token: '',
     userInfo: null,
@@ -28,12 +24,37 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    async loadFromStorage() {
+      const records = await userRepo.getAll()
+      if (records.length > 0) {
+        const saved = records[0]
+        this.token = saved.token || ''
+        this.userInfo = saved as UserInfo
+        this.isAuthenticated = saved.isLoggedIn || false
+      }
+    },
+
+    async saveToStorage() {
+      const records = await userRepo.getAll()
+      const data = {
+        token: this.token,
+        userInfo: this.userInfo,
+        isLoggedIn: this.isAuthenticated
+      }
+
+      if (records.length > 0) {
+        await userRepo.update(records[0].id!, data)
+      } else {
+        await userRepo.create(data as any)
+      }
+    },
+
     async login(loginForm: LoginForm) {
       loadingBar.start()
 
       try {
         await new Promise<void>(resolve => {
-          setTimeout(() => {
+          setTimeout(async () => {
             const mockToken = 'mock-token-' + Date.now()
             const mockUserInfo: UserInfo = {
               id: 1,
@@ -47,6 +68,7 @@ export const useUserStore = defineStore('user', {
             this.token = mockToken
             this.userInfo = mockUserInfo
             this.isAuthenticated = true
+            await this.saveToStorage()
 
             resolve()
           }, 800)
@@ -63,10 +85,15 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logout() {
+    async logout() {
       this.token = ''
       this.userInfo = null
       this.isAuthenticated = false
+
+      const records = await userRepo.getAll()
+      if (records.length > 0) {
+        await userRepo.delete(records[0].id!)
+      }
 
       message.info('已安全退出登录')
       router.push('/login')
@@ -84,8 +111,10 @@ export const useUserStore = defineStore('user', {
           role: 'admin',
           email: 'admin@example.com'
         }
+
         this.userInfo = mockUserInfo
-      } catch (error) {
+        await this.saveToStorage()
+      } catch (e) {
         message.error('刷新用户信息失败')
       }
     }

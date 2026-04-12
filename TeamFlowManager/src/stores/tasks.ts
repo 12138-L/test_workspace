@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Task } from '@/types'
+import { tasksRepo } from '@/db/repository'
 
 interface TasksState {
   list: Task[]
@@ -8,57 +9,9 @@ interface TasksState {
   statusFilter: string | null
 }
 
-const mockTasks: Task[] = [
-  {
-    id: 1,
-    title: '完成项目需求文档',
-    assignee: '张三',
-    priority: '高',
-    status: '进行中',
-    dueDate: '2024-01-20'
-  },
-  {
-    id: 2,
-    title: 'UI设计评审',
-    assignee: '李四',
-    priority: '中',
-    status: '待开始',
-    dueDate: '2024-01-22'
-  },
-  {
-    id: 3,
-    title: '后端接口开发',
-    assignee: '王五',
-    priority: '高',
-    status: '进行中',
-    dueDate: '2024-01-25'
-  },
-  {
-    id: 4,
-    title: '单元测试编写',
-    assignee: '赵六',
-    priority: '低',
-    status: '已完成',
-    dueDate: '2024-01-18'
-  },
-  {
-    id: 5,
-    title: '部署上线准备',
-    assignee: '张三',
-    priority: '高',
-    status: '已延期',
-    dueDate: '2024-01-10'
-  }
-]
-
 export const useTasksStore = defineStore('tasks', {
-  persist: {
-    key: 'tasks-store',
-    paths: ['list']
-  },
-
   state: (): TasksState => ({
-    list: mockTasks,
+    list: [],
     loading: false,
     searchKeyword: '',
     statusFilter: null
@@ -104,31 +57,37 @@ export const useTasksStore = defineStore('tasks', {
 
     async fetchTasks() {
       this.loading = true
-      return new Promise(resolve => {
-        setTimeout(() => {
-          this.loading = false
-          resolve(this.list)
-        }, 500)
-      })
-    },
-
-    addTask(task: Omit<Task, 'id'>) {
-      const newId = Math.max(...this.list.map(t => t.id), 0) + 1
-      this.list.push({
-        id: newId,
-        ...task
-      })
-    },
-
-    updateTask(id: number, updates: Partial<Task>) {
-      const index = this.list.findIndex(t => t.id === id)
-      if (index > -1) {
-        this.list[index] = { ...this.list[index], ...updates }
+      try {
+        this.list = await tasksRepo.getAll()
+      } finally {
+        this.loading = false
       }
     },
 
-    deleteTask(id: number) {
-      this.list = this.list.filter(t => t.id !== id)
+    async addTask(task: Omit<Task, 'id'>) {
+      const id = await tasksRepo.create(task)
+      await this.fetchTasks()
+      return id
+    },
+
+    async updateTask(id: number, updates: Partial<Task>) {
+      await tasksRepo.update(id, updates)
+      await this.fetchTasks()
+    },
+
+    async deleteTask(id: number) {
+      await tasksRepo.delete(id)
+      await this.fetchTasks()
+    },
+
+    async clearAll() {
+      await tasksRepo.clear()
+      this.list = []
+    },
+
+    async bulkCreate(tasks: Array<Omit<Task, 'id'>>) {
+      await tasksRepo.bulkCreate(tasks)
+      await this.fetchTasks()
     }
   }
 })

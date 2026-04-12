@@ -21,31 +21,40 @@
     </n-page-header>
 
     <n-card style="margin-top: 20px">
-      <template #header>
-        <div class="card-header">
-          <span>任务列表</span>
-          <n-input
-            v-model:value="tasksStore.searchKeyword"
-            placeholder="搜索任务"
-            style="width: 240px"
-            clearable
-            @update:value="handleSearch"
-          >
-            <template #prefix>🔍</template>
-          </n-input>
-        </div>
-      </template>
+        <template #header>
+          <div class="card-header">
+            <span>任务列表</span>
+            <n-input
+              v-model:value="tasksStore.searchKeyword"
+              placeholder="搜索任务"
+              style="width: 240px"
+              clearable
+              @update:value="handleSearch"
+            >
+              <template #prefix>🔍</template>
+            </n-input>
+          </div>
+        </template>
 
-      <n-spin :show="loading">
-        <template #description>加载中...</template>
-        <n-data-table
-          :columns="columns"
-          :data="tasksStore.filteredTasks"
-          :pagination="pagination"
-          virtual-scroll
-          :max-height="500"
-        />
-      </n-spin>
+        <n-spin :show="tasksStore.loading" description="加载中...">
+          <n-data-table
+            :columns="columns"
+            :data="tasksStore.filteredTasks"
+            :pagination="pagination"
+            striped
+            virtual-scroll
+            :max-height="500"
+          >
+            <template #empty>
+              <DataTableEmpty
+                title="暂无任务"
+                description="点击下方按钮创建第一个任务"
+                create-text="新建任务"
+                @create="handleCreateTask"
+              />
+            </template>
+          </n-data-table>
+        </n-spin>
     </n-card>
 
     <n-modal v-model:show="showModal" preset="card" :title="editingTask ? '编辑任务' : '新建任务'" style="width: 500px">
@@ -85,6 +94,8 @@ import type { Task } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
 import { getStatusType, getPriorityType } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import DataTableActions from '@/components/DataTableActions.vue'
+import DataTableEmpty from '@/components/DataTableEmpty.vue'
 
 const tasksStore = useTasksStore()
 const loading = ref(false)
@@ -164,32 +175,13 @@ const columns: DataTableColumns<Task> = [
   {
     title: '操作',
     key: 'actions',
-    width: 140,
+    width: 100,
     fixed: 'right',
-    render: (row: Task) => [
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleEdit(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.edit,
-              style: 'display: flex; width: 16px; height: 16px'
-            })
-        }
-      ),
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleDelete(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.delete,
-              style: 'display: flex; width: 16px; height: 16px; color: #d03050'
-            })
-        }
-      )
-    ]
+    render: (row: Task) =>
+      h(DataTableActions, {
+        onEdit: () => handleEdit(row),
+        onDelete: () => handleDelete(row)
+      })
   }
 ]
 
@@ -240,24 +232,24 @@ const handleDelete = (task: Task) => {
     content: `确定要删除任务「${task.title}」吗？此操作不可恢复。`,
     positiveText: '删除',
     negativeText: '取消',
-    onPositiveClick: () => {
-      tasksStore.deleteTask(task.id)
+    onPositiveClick: async () => {
+      await tasksStore.deleteTask(task.id)
       message.success(`任务「${task.title}」已删除`)
     }
   })
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!formData.value.title.trim()) {
     message.warning('请输入任务标题')
     return
   }
 
   if (editingTask.value) {
-    tasksStore.updateTask(editingTask.value.id, formData.value)
+    await tasksStore.updateTask(editingTask.value.id, formData.value)
     message.success('任务已更新')
   } else {
-    tasksStore.addTask(formData.value)
+    await tasksStore.addTask(formData.value)
     message.success('任务创建成功')
   }
 

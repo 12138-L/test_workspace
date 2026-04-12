@@ -79,22 +79,69 @@
         <n-descriptions-item label="Vue版本">3.4.15</n-descriptions-item>
         <n-descriptions-item label="构建时间">2024-01-15</n-descriptions-item>
         <n-descriptions-item label="UI框架">Naive UI 2.38.x</n-descriptions-item>
+        <n-descriptions-item label="存储引擎">Dexie IndexedDB</n-descriptions-item>
+        <n-descriptions-item label="数据记录">
+          项目: {{ dbStats.projects }} | 任务: {{ dbStats.tasks }} | 团队: {{ dbStats.team }}
+        </n-descriptions-item>
       </n-descriptions>
+    </n-card>
+
+    <n-card style="margin-top: 20px" title="数据库工具" hoverable>
+      <template #header-extra>
+        <n-tag type="info" size="small">开发者工具</n-tag>
+      </template>
+      <n-space vertical size="large">
+        <n-space>
+          <n-button @click="loadDbStats">
+            <template #icon>
+              <span v-html="Icons.check" class="icon-btn"></span>
+            </template>
+            刷新统计
+          </n-button>
+          <n-button @click="handleResetData">
+            <template #icon>
+              <span v-html="Icons.add" class="icon-btn"></span>
+            </template>
+            重置演示数据
+          </n-button>
+          <n-button type="error" @click="handleClearAll">
+            <template #icon>
+              <span v-html="Icons.delete" class="icon-btn"></span>
+            </template>
+            清空所有数据
+          </n-button>
+          <n-button type="info" @click="handleExportData">
+            <template #icon>
+              <span v-html="Icons.add" class="icon-btn"></span>
+            </template>
+            导出 JSON
+          </n-button>
+        </n-space>
+        <n-alert type="info" title="提示">
+          这些工具用于开发调试，生产环境建议移除。重置数据后会重新加载页面以确保状态同步。
+        </n-alert>
+      </n-space>
     </n-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { message } from '@/utils/naive'
-import { useSettingsStore } from '@/stores'
+import { ref, onMounted } from 'vue'
+import { message, dialog } from '@/utils/naive'
+import { useSettingsStore, useProjectsStore, useTasksStore, useTeamStore } from '@/stores'
+import { resetDatabase, clearAllData, getDatabaseStats, projectsRepo, tasksRepo, teamRepo } from '@/db'
 import { Icons } from '@/config/icons'
 
 const settingsStore = useSettingsStore()
+const projectsStore = useProjectsStore()
+const tasksStore = useTasksStore()
+const teamStore = useTeamStore()
 
 const basicSettings = ref({ ...settingsStore.basic })
 const notificationSettings = ref({ ...settingsStore.notification })
 const securitySettings = ref({ ...settingsStore.security })
+
+const dbStats = ref({ projects: 0, tasks: 0, team: 0 })
 
 const languageOptions = [
   { label: '中文', value: 'zh-CN' },
@@ -125,6 +172,71 @@ const saveAllSettings = () => {
   settingsStore.updateSecurity(securitySettings.value)
   message.success('所有设置已保存')
 }
+
+const loadDbStats = async () => {
+  dbStats.value = await getDatabaseStats()
+  message.success('统计已刷新')
+}
+
+const handleResetData = () => {
+  dialog.warning({
+    title: '确认重置',
+    content: '确定要重置为演示数据吗？所有现有数据将被清除。',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await resetDatabase()
+      await Promise.all([
+        projectsStore.fetchProjects(),
+        tasksStore.fetchTasks(),
+        teamStore.fetchMembers()
+      ])
+      await loadDbStats()
+      message.success('已重置为演示数据')
+    }
+  })
+}
+
+const handleClearAll = () => {
+  dialog.warning({
+    title: '确认清空',
+    content: '确定要清空所有业务数据吗？此操作不可恢复。',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await clearAllData()
+      await Promise.all([
+        projectsStore.fetchProjects(),
+        tasksStore.fetchTasks(),
+        teamStore.fetchMembers()
+      ])
+      await loadDbStats()
+      message.success('已清空所有数据')
+    }
+  })
+}
+
+const handleExportData = async () => {
+  const data = {
+    projects: await projectsRepo.getAll(),
+    tasks: await tasksRepo.getAll(),
+    team: await teamRepo.getAll(),
+    exportedAt: new Date().toISOString()
+  }
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `teamflow-backup-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  message.success('数据已导出')
+}
+
+onMounted(() => {
+  loadDbStats()
+})
 </script>
 
 <style scoped>

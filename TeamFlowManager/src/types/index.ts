@@ -9,6 +9,19 @@ export interface UserInfo {
   email: string
 }
 
+export interface User {
+  id?: number
+  token?: string
+  username: string
+  isLoggedIn?: boolean
+}
+
+export interface Settings {
+  id?: number
+  type: 'basic' | 'notification' | 'security'
+  [key: string]: any
+}
+
 export interface Project {
   id: number
   name: string
@@ -17,6 +30,7 @@ export interface Project {
   progress: number
   startDate: string
   endDate: string
+  createdAt?: number
 }
 
 export interface Task {
@@ -26,6 +40,8 @@ export interface Task {
   priority: '高' | '中' | '低'
   status: '待开始' | '进行中' | '已完成' | '已延期'
   dueDate: string
+  projectId?: number
+  createdAt?: number
 }
 
 export interface TeamMember {
@@ -33,8 +49,12 @@ export interface TeamMember {
   name: string
   role: string
   email: string
+  phone?: string
+  avatar?: string
   department: string
   status: 'active' | 'inactive'
+  joinedAt?: string
+  createdAt?: number
 }
 
 export interface Activity {

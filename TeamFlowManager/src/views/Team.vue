@@ -12,13 +12,24 @@
     </n-page-header>
 
     <n-card style="margin-top: 20px" title="团队成员列表">
-      <n-data-table
-        :columns="columns"
-        :data="teamStore.list"
-        :pagination="pagination"
-        virtual-scroll
-        :max-height="500"
-      />
+      <n-spin :show="teamStore.loading" description="加载中...">
+        <n-data-table
+          :columns="columns"
+          :data="teamStore.list"
+          :pagination="pagination"
+          virtual-scroll
+          :max-height="500"
+        >
+          <template #empty>
+            <DataTableEmpty
+              title="暂无团队成员"
+              description="点击下方按钮添加第一位成员"
+              create-text="添加成员"
+              @create="handleAddMember"
+            />
+          </template>
+        </n-data-table>
+      </n-spin>
     </n-card>
 
     <n-modal v-model:show="showModal" preset="card" :title="editingMember ? '编辑成员' : '添加成员'" style="width: 500px">
@@ -62,6 +73,8 @@ import { useTeamStore } from '@/stores'
 import { message, dialog } from '@/utils/naive'
 import { getStatusType, getMemberStatusText } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import DataTableActions from '@/components/DataTableActions.vue'
+import DataTableEmpty from '@/components/DataTableEmpty.vue'
 
 const teamStore = useTeamStore()
 
@@ -126,32 +139,13 @@ const columns: DataTableColumns<TeamMember> = [
   {
     title: '操作',
     key: 'actions',
-    width: 140,
+    width: 100,
     fixed: 'right',
-    render: (row: TeamMember) => [
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleEdit(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.edit,
-              style: 'display: flex; width: 16px; height: 16px'
-            })
-        }
-      ),
-      h(
-        'n-button',
-        { quaternary: true, circle: true, size: 'small', onClick: () => handleDelete(row) },
-        {
-          icon: () =>
-            h('span', {
-              innerHTML: Icons.delete,
-              style: 'display: flex; width: 16px; height: 16px; color: #d03050'
-            })
-        }
-      )
-    ]
+    render: (row: TeamMember) =>
+      h(DataTableActions, {
+        onEdit: () => handleEdit(row),
+        onDelete: () => handleDelete(row)
+      })
   }
 ]
 
@@ -183,24 +177,24 @@ function handleDelete(member: TeamMember) {
     content: `确定要删除成员「${member.name}」吗？此操作不可恢复。`,
     positiveText: '删除',
     negativeText: '取消',
-    onPositiveClick: () => {
-      teamStore.deleteMember(member.id)
+    onPositiveClick: async () => {
+      await teamStore.deleteMember(member.id)
       message.success(`成员「${member.name}」已删除`)
     }
   })
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!formData.value.name.trim()) {
     message.warning('请输入姓名')
     return
   }
 
   if (editingMember.value) {
-    teamStore.updateMember(editingMember.value.id, formData.value)
+    await teamStore.updateMember(editingMember.value.id, formData.value)
     message.success('成员信息已更新')
   } else {
-    teamStore.addMember(formData.value)
+    await teamStore.addMember(formData.value)
     message.success('成员添加成功')
   }
 
