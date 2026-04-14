@@ -48,6 +48,13 @@ export const menuConfig: MenuConfig[] = [
     component: () => import('@/views/Calendar.vue')
   },
   {
+    path: '/files',
+    name: 'Files',
+    title: '文件管理',
+    icon: 'file',
+    component: () => import('@/views/Files.vue')
+  },
+  {
     path: '/settings',
     name: 'Settings',
     title: '系统设置',
@@ -56,9 +63,7 @@ export const menuConfig: MenuConfig[] = [
   }
 ]
 
-export function generateMenuOptions(
-  handleClick: (path: string) => void
-): MenuOption[] {
+export function generateMenuOptions(handleClick: (_path: string) => void): MenuOption[] {
   return menuConfig.map(item => ({
     label: () =>
       h(

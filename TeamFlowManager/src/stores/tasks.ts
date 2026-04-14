@@ -77,9 +77,7 @@ export const useTasksStore = defineStore('tasks', {
 
     async updateTask(id: number, updates: Partial<Task>) {
       await tasksRepo.update(id, updates)
-      this.list = this.list.map(t =>
-        t.id === id ? { ...t, ...updates } : t
-      )
+      this.list = this.list.map(t => (t.id === id ? { ...t, ...updates } : t))
     },
 
     async deleteTask(id: number) {

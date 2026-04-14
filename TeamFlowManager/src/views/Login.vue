@@ -16,7 +16,13 @@
         <p class="logo-desc">高效团队管理 · 本地优先 · 数据安全</p>
       </div>
 
-      <n-form ref="loginFormRef" :model="loginForm" :rules="loginRules" size="large" class="login-form-inner">
+      <n-form
+        ref="loginFormRef"
+        :model="loginForm"
+        :rules="loginRules"
+        size="large"
+        class="login-form-inner"
+      >
         <n-form-item path="username">
           <n-input
             v-model:value="loginForm.username"
@@ -72,7 +78,7 @@
 import type { FormRules } from 'naive-ui'
 import { message } from '@/utils/naive'
 import type { LoginForm } from '@/types'
-import { useUserStore } from '@/stores'
+import { useUserStore } from '@/stores/user'
 import { Icons } from '@/config/icons'
 
 const userStore = useUserStore()

@@ -6,7 +6,14 @@ import './styles/tailwind.css'
 import './styles/icons.css'
 import { setupNaiveDiscreteApi } from './utils/naive'
 import { initDatabase } from './db'
-import { useUserStore, useSettingsStore, useAppStore, useProjectsStore, useTasksStore, useTeamStore } from './stores'
+import {
+  useUserStore,
+  useSettingsStore,
+  useAppStore,
+  useProjectsStore,
+  useTasksStore,
+  useTeamStore
+} from './stores'
 
 async function bootstrap() {
   const app = createApp(App)

@@ -50,10 +50,12 @@
             striped
             virtual-scroll
             :max-height="550"
-            :row-properties="(row: Task) => ({
-              style: 'cursor: pointer',
-              onClick: () => handleEdit(row)
-            })"
+            :row-properties="
+              (row: Task) => ({
+                style: 'cursor: pointer',
+                onClick: () => handleEdit(row)
+              })
+            "
           >
             <template #empty>
               <DataTableEmpty
@@ -77,16 +79,31 @@
       </n-spin>
     </n-card>
 
-    <n-modal v-model:show="showModal" preset="card" :title="editingTask ? '编辑任务' : '新建任务'" style="width: 500px">
+    <n-modal
+      v-model:show="showModal"
+      preset="card"
+      :title="editingTask ? '编辑任务' : '新建任务'"
+      style="width: 500px"
+    >
       <n-form :model="formData" label-placement="left" label-width="100">
         <n-form-item label="任务标题" required>
           <n-input v-model:value="formData.title" placeholder="请输入任务标题" />
         </n-form-item>
         <n-form-item label="任务内容">
-          <n-input v-model:value="formData.description" type="textarea" :rows="3" placeholder="请输入任务详情描述" />
+          <n-input
+            v-model:value="formData.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入任务详情描述"
+          />
         </n-form-item>
         <n-form-item label="备注">
-          <n-input v-model:value="formData.remark" type="textarea" :rows="2" placeholder="添加备注信息" />
+          <n-input
+            v-model:value="formData.remark"
+            type="textarea"
+            :rows="2"
+            placeholder="添加备注信息"
+          />
         </n-form-item>
         <n-form-item label="负责人">
           <n-input v-model:value="formData.assignee" placeholder="请输入负责人" />
@@ -98,10 +115,22 @@
           <n-select v-model:value="formData.status" :options="statusOptions" />
         </n-form-item>
         <n-form-item label="开始日期">
-          <n-date-picker v-model:value="formData.startTime as any" type="date" format="yyyy-MM-dd" value-format="timestamp" style="width: 100%" />
+          <n-date-picker
+            v-model:value="formData.startTime as any"
+            type="date"
+            format="yyyy-MM-dd"
+            value-format="timestamp"
+            style="width: 100%"
+          />
         </n-form-item>
         <n-form-item label="截止日期">
-          <n-date-picker v-model:value="formData.dueDate as any" type="date" format="yyyy-MM-dd" value-format="timestamp" style="width: 100%" />
+          <n-date-picker
+            v-model:value="formData.dueDate as any"
+            type="date"
+            format="yyyy-MM-dd"
+            value-format="timestamp"
+            style="width: 100%"
+          />
         </n-form-item>
       </n-form>
 
@@ -127,7 +156,7 @@ import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
 
-function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+function debounce<T extends (..._args: any[]) => any>(fn: T, delay: number) {
   let timer: number
   return (...args: Parameters<T>) => {
     clearTimeout(timer)
@@ -193,9 +222,7 @@ const columns: DataTableColumns<Task> = [
     render: (row: Task) =>
       h('div', { class: 'task-info-cell' }, [
         h('div', { class: 'task-title' }, row.title),
-        row.description
-          ? h('div', { class: 'task-desc' }, row.description)
-          : null
+        row.description ? h('div', { class: 'task-desc' }, row.description) : null
       ])
   },
   {
@@ -208,7 +235,11 @@ const columns: DataTableColumns<Task> = [
     key: 'priority',
     width: 80,
     render: (row: Task) =>
-      h('n-tag', { type: getPriorityType(row.priority), size: 'small' }, { default: () => row.priority })
+      h(
+        'n-tag',
+        { type: getPriorityType(row.priority), size: 'small' },
+        { default: () => row.priority }
+      )
   },
   {
     title: '状态',
@@ -233,10 +264,19 @@ const columns: DataTableColumns<Task> = [
     width: 120,
     render: (row: Task) =>
       row.remark
-        ? h('n-tooltip', { trigger: 'hover', placement: 'top' }, {
-            default: () => row.remark,
-            trigger: () => h('span', { class: 'remark-text' }, row.remark.slice(0, 12) + (row.remark.length > 12 ? '...' : ''))
-          })
+        ? h(
+            'n-tooltip',
+            { trigger: 'hover', placement: 'top' },
+            {
+              default: () => row.remark,
+              trigger: () =>
+                h(
+                  'span',
+                  { class: 'remark-text' },
+                  row.remark.slice(0, 12) + (row.remark.length > 12 ? '...' : '')
+                )
+            }
+          )
         : h('span', { class: 'empty-text' }, '-')
   },
   {
@@ -307,7 +347,7 @@ async function handleStatusChange(taskId: number, newStatus: Task['status']) {
 
 async function handleSubmit() {
   if (submitting.value) return
-  
+
   const title = formData.value.title?.trim()
   if (!title) {
     message.warning('请输入任务标题')
@@ -349,11 +389,11 @@ const setSearchDebounced = debounce((value: string) => {
   tasksStore.setSearchKeyword(value)
 }, 300)
 
-watch(localSearch, (value) => {
+watch(localSearch, value => {
   setSearchDebounced(value)
 })
 
-watch(showModal, (open) => {
+watch(showModal, open => {
   if (!open) {
     resetForm()
   }

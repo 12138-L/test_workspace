@@ -21,7 +21,11 @@
             <div class="user-info">
               <n-avatar round :src="userStore.avatar" size="small" />
               <span class="username">{{ userStore.username }}</span>
-              <span v-html="Icons.chevronDown" class="icon-btn" style="width: 16px; height: 16px"></span>
+              <span
+                v-html="Icons.chevronDown"
+                class="icon-btn"
+                style="width: 16px; height: 16px"
+              ></span>
             </div>
           </n-dropdown>
         </n-space>

@@ -149,7 +149,8 @@ import { onMounted, computed } from 'vue'
 import { message, getStatusType, getProgressColor, useAsync } from '@/utils'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
-import { useUserStore, useTeamStore } from '@/stores'
+import { useUserStore } from '@/stores/user'
+import { useTeamStore } from '@/stores/team'
 import { Icons } from '@/config/icons'
 
 const projectsStore = useProjectsStore()

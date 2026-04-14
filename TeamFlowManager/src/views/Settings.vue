@@ -17,15 +17,28 @@
           <template #header-extra>
             <span v-html="Icons.settings" class="card-header-icon"></span>
           </template>
-          <n-form :model="basicSettings" label-placement="left" label-width="100" class="settings-form">
+          <n-form
+            :model="basicSettings"
+            label-placement="left"
+            label-width="100"
+            class="settings-form"
+          >
             <n-form-item label="系统名称">
               <n-input v-model:value="basicSettings.systemName" />
             </n-form-item>
             <n-form-item label="语言">
-              <n-select v-model:value="basicSettings.language" style="width: 100%" :options="languageOptions" />
+              <n-select
+                v-model:value="basicSettings.language"
+                style="width: 100%"
+                :options="languageOptions"
+              />
             </n-form-item>
             <n-form-item label="时区">
-              <n-select v-model:value="basicSettings.timezone" style="width: 100%" :options="timezoneOptions" />
+              <n-select
+                v-model:value="basicSettings.timezone"
+                style="width: 100%"
+                :options="timezoneOptions"
+              />
             </n-form-item>
           </n-form>
         </n-card>
@@ -36,7 +49,12 @@
           <template #header-extra>
             <span v-html="Icons.bell" class="card-header-icon"></span>
           </template>
-          <n-form :model="notificationSettings" label-placement="left" label-width="100" class="settings-form">
+          <n-form
+            :model="notificationSettings"
+            label-placement="left"
+            label-width="100"
+            class="settings-form"
+          >
             <n-form-item label="邮件通知">
               <n-switch v-model:value="notificationSettings.email" />
             </n-form-item>
@@ -58,15 +76,28 @@
           <template #header-extra>
             <span v-html="Icons.user" class="card-header-icon"></span>
           </template>
-          <n-form :model="securitySettings" label-placement="left" label-width="100" class="settings-form">
+          <n-form
+            :model="securitySettings"
+            label-placement="left"
+            label-width="100"
+            class="settings-form"
+          >
             <n-form-item label="双重认证">
               <n-switch v-model:value="securitySettings.twoFactorAuth" />
             </n-form-item>
             <n-form-item label="会话超时">
-              <n-select v-model:value="securitySettings.sessionTimeout" style="width: 100%" :options="timeoutOptions" />
+              <n-select
+                v-model:value="securitySettings.sessionTimeout"
+                style="width: 100%"
+                :options="timeoutOptions"
+              />
             </n-form-item>
             <n-form-item label="密码强度">
-              <n-select v-model:value="securitySettings.passwordStrength" style="width: 100%" :options="strengthOptions" />
+              <n-select
+                v-model:value="securitySettings.passwordStrength"
+                style="width: 100%"
+                :options="strengthOptions"
+              />
             </n-form-item>
           </n-form>
         </n-card>
@@ -129,7 +160,14 @@
 import { ref, onMounted } from 'vue'
 import { message, dialog } from '@/utils/naive'
 import { useSettingsStore, useProjectsStore, useTasksStore, useTeamStore } from '@/stores'
-import { resetDatabase, clearAllData, getDatabaseStats, projectsRepo, tasksRepo, teamRepo } from '@/db'
+import {
+  resetDatabase,
+  clearAllData,
+  getDatabaseStats,
+  projectsRepo,
+  tasksRepo,
+  teamRepo
+} from '@/db'
 import { Icons } from '@/config/icons'
 
 const settingsStore = useSettingsStore()

@@ -20,10 +20,12 @@
           striped
           virtual-scroll
           :max-height="500"
-          :row-properties="(row: Project) => ({
-            style: 'cursor: pointer',
-            onClick: () => handleEdit(row)
-          })"
+          :row-properties="
+            (row: Project) => ({
+              style: 'cursor: pointer',
+              onClick: () => handleEdit(row)
+            })
+          "
         >
           <template #empty>
             <DataTableEmpty
@@ -37,8 +39,13 @@
       </n-spin>
     </n-card>
 
-    <n-modal v-model:show="showModal" preset="card" :title="editingProject ? '编辑项目' : '新建项目'" style="width: 500px">
-      <n-form :model="formData" label-placement="left" label-width="100">
+    <n-modal
+      v-model:show="showModal"
+      preset="card"
+      :title="editingProject ? '编辑项目' : '新建项目'"
+      style="width: 500px"
+    >
+      <n-form v-if="showModal" :model="formData" label-placement="left" label-width="100">
         <n-form-item label="项目名称" required>
           <n-input v-model:value="formData.name" placeholder="请输入项目名称" />
         </n-form-item>
@@ -50,13 +57,25 @@
         </n-form-item>
         <n-form-item label="进度">
           <n-slider v-model:value="formData.progress" :min="0" :max="100" :step="5" />
-          <div style="text-align: right; color: #666; font-size: 12px">{{ formData.progress }}%</div>
+          <div style="text-align: right; color: #666; font-size: 12px">
+            {{ formData.progress }}%
+          </div>
         </n-form-item>
         <n-form-item label="开始日期">
-          <n-date-picker v-model:value="formData.startDate as any" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="width: 100%" />
+          <n-date-picker
+            v-model:value="formData.startDate"
+            type="date"
+            format="yyyy-MM-dd"
+            style="width: 100%"
+          />
         </n-form-item>
         <n-form-item label="截止日期">
-          <n-date-picker v-model:value="formData.endDate as any" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="width: 100%" />
+          <n-date-picker
+            v-model:value="formData.endDate"
+            type="date"
+            format="yyyy-MM-dd"
+            style="width: 100%"
+          />
         </n-form-item>
       </n-form>
 
@@ -72,7 +91,7 @@
 
 <script setup lang="ts">
 import type { DataTableColumns } from 'naive-ui'
-import { h, ref, onMounted } from 'vue'
+import { h, ref, onMounted, watch } from 'vue'
 import type { Project } from '@/types'
 import { useProjectsStore } from '@/stores/projects'
 import { message, dialog } from '@/utils/naive'
@@ -95,23 +114,44 @@ const showModal = ref(false)
 const editingProject = ref<Project | null>(null)
 const submitting = ref(false)
 
-const defaultFormData = {
+function formatTimestamp(ts: number | null): string {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function parseDateStr(dateStr: string): number | null {
+  if (!dateStr) return null
+  const ts = new Date(dateStr).getTime()
+  return isNaN(ts) ? null : ts
+}
+
+interface FormDataType {
+  name: string
+  manager: string
+  status: Project['status']
+  progress: number
+  startDate: number | null
+  endDate: number | null
+}
+
+const defaultFormData: FormDataType = {
   name: '',
   manager: '',
   status: '进行中' as Project['status'],
   progress: 0,
-  startDate: new Date().toISOString().slice(0, 10),
-  endDate: ''
+  startDate: new Date().getTime(),
+  endDate: null
 }
 
-const formData = ref({ ...defaultFormData })
+const formData = ref<FormDataType>({ ...defaultFormData })
 
 function resetForm() {
   editingProject.value = null
   formData.value = { ...defaultFormData }
 }
 
-watch(showModal, (open) => {
+watch(showModal, open => {
   if (!open) {
     resetForm()
   }
@@ -182,7 +222,14 @@ function handleCreateProject() {
 
 function handleEdit(project: Project) {
   editingProject.value = project
-  formData.value = { ...project }
+  formData.value = {
+    name: project.name,
+    manager: project.manager,
+    status: project.status,
+    progress: project.progress,
+    startDate: parseDateStr(project.startDate),
+    endDate: parseDateStr(project.endDate)
+  }
   showModal.value = true
 }
 
@@ -213,7 +260,9 @@ async function handleSubmit() {
     const submitData = {
       ...formData.value,
       name,
-      manager: formData.value.manager?.trim() || ''
+      manager: formData.value.manager?.trim() || '',
+      startDate: formatTimestamp(formData.value.startDate),
+      endDate: formatTimestamp(formData.value.endDate)
     }
 
     if (editingProject.value) {

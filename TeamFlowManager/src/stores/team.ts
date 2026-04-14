@@ -45,9 +45,7 @@ export const useTeamStore = defineStore('team', {
 
     async updateMember(id: number, updates: Partial<TeamMember>) {
       await teamRepo.update(id, updates)
-      this.list = this.list.map(m =>
-        m.id === id ? { ...m, ...updates } : m
-      )
+      this.list = this.list.map(m => (m.id === id ? { ...m, ...updates } : m))
     },
 
     async deleteMember(id: number) {

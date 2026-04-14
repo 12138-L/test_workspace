@@ -3,22 +3,22 @@ export * from './repository'
 export * from './migration'
 
 import { runMigrationIfNeeded } from './migration'
-import { projectsRepo, tasksRepo, teamRepo } from './repository'
-import { initDemoData } from './migration'
+import {
+  projectsRepo,
+  tasksRepo,
+  teamRepo,
+  leaveRepo,
+  overtimeRepo,
+  adjustmentRepo
+} from './repository'
 
 export async function initDatabase() {
   const migration = await runMigrationIfNeeded()
 
-  const hasData = (await projectsRepo.count()) > 0
-
-  if (!hasData) {
-    await initDemoData()
-  }
-
   return {
     migrationRun: migration.run,
     migrationResult: migration.result,
-    demoDataInitialized: !hasData
+    demoDataInitialized: false
   }
 }
 
@@ -26,16 +26,20 @@ export async function resetDatabase() {
   await Promise.all([
     projectsRepo.clear(),
     tasksRepo.clear(),
-    teamRepo.clear()
+    teamRepo.clear(),
+    leaveRepo.clear(),
+    overtimeRepo.clear(),
+    adjustmentRepo.clear()
   ])
-  await initDemoData()
 }
 
 export async function clearAllData() {
   await Promise.all([
     projectsRepo.clear(),
     tasksRepo.clear(),
-    teamRepo.clear()
+    teamRepo.clear(),
+    leaveRepo.clear(),
+    overtimeRepo.clear()
   ])
 }
 
@@ -43,7 +47,9 @@ export async function getDatabaseStats() {
   return {
     projects: await projectsRepo.count(),
     tasks: await tasksRepo.count(),
-    team: await teamRepo.count()
+    team: await teamRepo.count(),
+    leaves: await leaveRepo.count(),
+    overtimes: await overtimeRepo.count()
   }
 }
 

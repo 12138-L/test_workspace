@@ -1,14 +1,12 @@
 <template>
   <div class="kanban-board">
     <div class="kanban-columns">
-      <div
-        v-for="column in columns"
-        :key="column.status"
-        class="kanban-column"
-      >
+      <div v-for="column in columns" :key="column.status" class="kanban-column">
         <div class="column-header">
           <span class="column-title">{{ column.title }}</span>
-          <n-tag :type="column.type" size="small">{{ getTasksByStatus(column.status).length }}</n-tag>
+          <n-tag :type="column.type" size="small">{{
+            getTasksByStatus(column.status).length
+          }}</n-tag>
         </div>
 
         <div
@@ -23,15 +21,13 @@
             :key="task.id"
             class="task-card"
             draggable="true"
-            :class="{ 'dragging': draggingTaskId === task.id }"
+            :class="{ dragging: draggingTaskId === task.id }"
             @dragstart="handleDragStart($event, task.id)"
             @dragend="handleDragEnd"
           >
             <div class="task-header">
               <div class="task-title" @click="$emit('task-click', task)">{{ task.title }}</div>
-              <button class="delete-btn" @click.stop="$emit('task-delete', task)">
-                ×
-              </button>
+              <button class="delete-btn" @click.stop="$emit('task-delete', task)">×</button>
             </div>
             <div v-if="task.description" class="task-description">{{ task.description }}</div>
             <div class="task-meta">
@@ -52,7 +48,9 @@
             </div>
             <div v-if="task.remark" class="task-remark">
               <span class="remark-badge">📝</span>
-              <span class="remark-text">{{ task.remark.slice(0, 20) }}{{ task.remark.length > 20 ? '...' : '' }}</span>
+              <span class="remark-text"
+                >{{ task.remark.slice(0, 20) }}{{ task.remark.length > 20 ? '...' : '' }}</span
+              >
             </div>
           </div>
 
@@ -252,6 +250,7 @@ function handleDrop(newStatus: Task['status']) {
   line-height: 1.5;
   margin-bottom: 8px;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

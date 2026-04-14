@@ -43,9 +43,7 @@ export const useProjectsStore = defineStore('projects', {
 
     async updateProject(id: number, updates: Partial<Project>) {
       await projectsRepo.update(id, updates)
-      this.list = this.list.map(p =>
-        p.id === id ? { ...p, ...updates } : p
-      )
+      this.list = this.list.map(p => (p.id === id ? { ...p, ...updates } : p))
     },
 
     async deleteProject(id: number) {

@@ -19,10 +19,12 @@
           :pagination="pagination"
           virtual-scroll
           :max-height="500"
-          :row-properties="(row: TeamMember) => ({
-            style: 'cursor: pointer',
-            onClick: () => handleEdit(row)
-          })"
+          :row-properties="
+            (row: TeamMember) => ({
+              style: 'cursor: pointer',
+              onClick: () => handleEdit(row)
+            })
+          "
         >
           <template #empty>
             <DataTableEmpty
@@ -36,7 +38,12 @@
       </n-spin>
     </n-card>
 
-    <n-modal v-model:show="showModal" preset="card" :title="editingMember ? '编辑成员' : '添加成员'" style="width: 500px">
+    <n-modal
+      v-model:show="showModal"
+      preset="card"
+      :title="editingMember ? '编辑成员' : '添加成员'"
+      style="width: 500px"
+    >
       <n-form :model="formData" label-placement="left" label-width="100">
         <n-form-item label="姓名" required>
           <n-input v-model:value="formData.name" placeholder="请输入姓名" />
@@ -118,7 +125,7 @@ function resetForm() {
   formData.value = { ...defaultFormData }
 }
 
-watch(showModal, (open) => {
+watch(showModal, open => {
   if (!open) {
     resetForm()
   }
