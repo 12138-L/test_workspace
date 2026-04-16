@@ -90,78 +90,40 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * Projects - 项目管理页面
+ *
+ * 【最终架构】
+ * Projects.vue                  ← 视图层 - 布局
+ *     ↓
+ * useProjects.ts                ← 业务逻辑层 - CRUD + useAsync
+ */
+
 import type { DataTableColumns } from 'naive-ui'
-import { h, ref, onMounted, watch } from 'vue'
+import { h, onMounted } from 'vue'
 import type { Project } from '@/types'
 import { useProjectsStore } from '@/stores/projects'
-import { message, dialog } from '@/utils/naive'
+import { dialog } from '@/utils/naive'
 import { getStatusType, getProgressColor } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import { useProjects } from '@/composables/useProjects'
 import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
 
 const projectsStore = useProjectsStore()
 
-onMounted(() => {
-  projectsStore.fetchProjects()
-})
-
-const pagination = {
-  pageSize: 10
-}
-
-const showModal = ref(false)
-const editingProject = ref<Project | null>(null)
-const submitting = ref(false)
-
-function formatTimestamp(ts: number | null): string {
-  if (!ts) return ''
-  const d = new Date(ts)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function parseDateStr(dateStr: string): number | null {
-  if (!dateStr) return null
-  const ts = new Date(dateStr).getTime()
-  return isNaN(ts) ? null : ts
-}
-
-interface FormDataType {
-  name: string
-  manager: string
-  status: Project['status']
-  progress: number
-  startDate: number | null
-  endDate: number | null
-}
-
-const defaultFormData: FormDataType = {
-  name: '',
-  manager: '',
-  status: '进行中' as Project['status'],
-  progress: 0,
-  startDate: new Date().getTime(),
-  endDate: null
-}
-
-const formData = ref<FormDataType>({ ...defaultFormData })
-
-function resetForm() {
-  editingProject.value = null
-  formData.value = { ...defaultFormData }
-}
-
-watch(showModal, open => {
-  if (!open) {
-    resetForm()
-  }
-})
-
-const statusOptions = [
-  { label: '进行中', value: '进行中' },
-  { label: '已完成', value: '已完成' },
-  { label: '已暂停', value: '已暂停' }
-]
+const {
+  pagination,
+  showModal,
+  editingProject,
+  submitting,
+  formData,
+  statusOptions,
+  handleCreateProject,
+  handleEdit,
+  handleDelete,
+  handleSubmit
+} = useProjects({ projects: projectsStore })
 
 const columns: DataTableColumns<Project> = [
   {
@@ -210,78 +172,34 @@ const columns: DataTableColumns<Project> = [
     render: (row: Project) =>
       h(DataTableActions, {
         onEdit: () => handleEdit(row),
-        onDelete: () => handleDelete(row)
+        onDelete: () => {
+          dialog.warning({
+            title: '确认删除',
+            content: `确定要删除项目「${row.name}」吗？此操作不可恢复。`,
+            positiveText: '删除',
+            negativeText: '取消',
+            onPositiveClick: async () => {
+              await handleDelete(row)
+            }
+          })
+        }
       })
   }
 ]
 
-function handleCreateProject() {
-  resetForm()
-  showModal.value = true
-}
-
-function handleEdit(project: Project) {
-  editingProject.value = project
-  formData.value = {
-    name: project.name,
-    manager: project.manager,
-    status: project.status,
-    progress: project.progress,
-    startDate: parseDateStr(project.startDate),
-    endDate: parseDateStr(project.endDate)
-  }
-  showModal.value = true
-}
-
-function handleDelete(project: Project) {
-  dialog.warning({
-    title: '确认删除',
-    content: `确定要删除项目「${project.name}」吗？此操作不可恢复。`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      await projectsStore.deleteProject(project.id)
-      message.success(`项目「${project.name}」已删除`)
-    }
-  })
-}
-
-async function handleSubmit() {
-  if (submitting.value) return
-
-  const name = formData.value.name?.trim()
-  if (!name) {
-    message.warning('请输入项目名称')
-    return
-  }
-
-  submitting.value = true
-  try {
-    const submitData = {
-      ...formData.value,
-      name,
-      manager: formData.value.manager?.trim() || '',
-      startDate: formatTimestamp(formData.value.startDate),
-      endDate: formatTimestamp(formData.value.endDate)
-    }
-
-    if (editingProject.value) {
-      await projectsStore.updateProject(editingProject.value.id, submitData)
-      message.success('项目已更新')
-    } else {
-      await projectsStore.addProject(submitData)
-      message.success('项目创建成功')
-    }
-
-    showModal.value = false
-  } finally {
-    submitting.value = false
-  }
-}
+onMounted(() => {
+  projectsStore.fetchProjects()
+})
 </script>
 
 <style scoped>
 .projects-container {
   padding: 0;
+}
+
+.icon-btn {
+  display: flex;
+  width: 16px;
+  height: 16px;
 }
 </style>

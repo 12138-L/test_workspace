@@ -40,20 +40,30 @@ const editForm = ref<EditForm>({
   remark: ''
 })
 
-watch(() => props.editingFile, (file) => {
-  if (file) {
-    editForm.value = {
-      originalName: file.originalName,
-      category: file.category,
-      memberId: file.memberId,
-      remark: file.remark || ''
+watch(
+  () => props.editingFile,
+  file => {
+    if (file) {
+      editForm.value = {
+        originalName: file.originalName,
+        category: file.category,
+        memberId: file.memberId,
+        remark: file.remark || ''
+      }
     }
-  }
-}, { immediate: true })
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
-  <n-modal :show="show" @update:show="(v) => emit('update:show', v)" preset="card" title="编辑文件" style="width: 500px">
+  <n-modal
+    :show="show"
+    @update:show="v => emit('update:show', v)"
+    preset="card"
+    title="编辑文件"
+    style="width: 500px"
+  >
     <n-space vertical style="width: 100%" v-if="editingFile">
       <n-form-item label="文件名">
         <n-input v-model:value="editForm.originalName" disabled />

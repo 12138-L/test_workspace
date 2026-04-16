@@ -77,59 +77,41 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * Team - 团队管理页面
+ *
+ * 【最终架构】
+ * Team.vue                      ← 视图层 - 布局
+ *     ↓
+ * useTeam.ts                    ← 业务逻辑层 - CRUD + useAsync
+ */
+
 import type { DataTableColumns } from 'naive-ui'
-import { h, ref, onMounted } from 'vue'
+import { h, onMounted } from 'vue'
 import type { TeamMember } from '@/types'
 import { useTeamStore } from '@/stores'
-import { message, dialog } from '@/utils/naive'
+import { dialog } from '@/utils/naive'
 import { getStatusType, getMemberStatusText } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import { useTeam } from '@/composables/useTeam'
 import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
 
 const teamStore = useTeamStore()
 
-const pagination = {
-  pageSize: 10
-}
-
-const departmentOptions = [
-  { label: '技术部', value: '技术部' },
-  { label: '产品部', value: '产品部' },
-  { label: '设计部', value: '设计部' },
-  { label: '运营部', value: '运营部' },
-  { label: '市场部', value: '市场部' }
-]
-
-const statusOptions = [
-  { label: '活跃', value: 'active' },
-  { label: '离职', value: 'inactive' }
-]
-
-const showModal = ref(false)
-const editingMember = ref<TeamMember | null>(null)
-const submitting = ref(false)
-
-const defaultFormData = {
-  name: '',
-  role: '',
-  email: '',
-  department: '技术部',
-  status: 'active' as TeamMember['status']
-}
-
-const formData = ref({ ...defaultFormData })
-
-function resetForm() {
-  editingMember.value = null
-  formData.value = { ...defaultFormData }
-}
-
-watch(showModal, open => {
-  if (!open) {
-    resetForm()
-  }
-})
+const {
+  pagination,
+  departmentOptions,
+  statusOptions,
+  showModal,
+  editingMember,
+  submitting,
+  formData,
+  handleAddMember,
+  handleEdit,
+  handleDelete,
+  handleSubmit
+} = useTeam({ team: teamStore })
 
 const columns: DataTableColumns<TeamMember> = [
   {
@@ -170,7 +152,17 @@ const columns: DataTableColumns<TeamMember> = [
     render: (row: TeamMember) =>
       h(DataTableActions, {
         onEdit: () => handleEdit(row),
-        onDelete: () => handleDelete(row)
+        onDelete: () => {
+          dialog.warning({
+            title: '确认删除',
+            content: `确定要删除成员「${row.name}」吗？此操作不可恢复。`,
+            positiveText: '删除',
+            negativeText: '取消',
+            onPositiveClick: async () => {
+              await handleDelete(row)
+            }
+          })
+        }
       })
   }
 ]
@@ -178,66 +170,16 @@ const columns: DataTableColumns<TeamMember> = [
 onMounted(() => {
   teamStore.fetchTeam()
 })
-
-function handleAddMember() {
-  resetForm()
-  showModal.value = true
-}
-
-function handleEdit(member: TeamMember) {
-  editingMember.value = member
-  formData.value = { ...member }
-  showModal.value = true
-}
-
-function handleDelete(member: TeamMember) {
-  dialog.warning({
-    title: '确认删除',
-    content: `确定要删除成员「${member.name}」吗？此操作不可恢复。`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      await teamStore.deleteMember(member.id)
-      message.success(`成员「${member.name}」已删除`)
-    }
-  })
-}
-
-async function handleSubmit() {
-  if (submitting.value) return
-
-  const name = formData.value.name?.trim()
-  if (!name) {
-    message.warning('请输入姓名')
-    return
-  }
-
-  submitting.value = true
-  try {
-    const submitData = {
-      ...formData.value,
-      name,
-      role: formData.value.role?.trim() || '',
-      email: formData.value.email?.trim() || ''
-    }
-
-    if (editingMember.value) {
-      await teamStore.updateMember(editingMember.value.id, submitData)
-      message.success('成员信息已更新')
-    } else {
-      await teamStore.addMember(submitData)
-      message.success('成员添加成功')
-    }
-
-    showModal.value = false
-  } finally {
-    submitting.value = false
-  }
-}
 </script>
 
 <style scoped>
 .team-container {
   padding: 0;
+}
+
+.icon-btn {
+  display: flex;
+  width: 16px;
+  height: 16px;
 }
 </style>

@@ -37,11 +37,14 @@ const uploadForm = ref({
   remark: ''
 })
 
-watch(() => props.show, (val) => {
-  if (!val) {
-    uploadForm.value = { category: '其他', memberId: undefined, remark: '' }
+watch(
+  () => props.show,
+  val => {
+    if (!val) {
+      uploadForm.value = { category: '其他', memberId: undefined, remark: '' }
+    }
   }
-})
+)
 
 function handleModalUpload(options: UploadCustomRequestOptions) {
   emit('upload', options, uploadForm.value)
@@ -49,15 +52,16 @@ function handleModalUpload(options: UploadCustomRequestOptions) {
 </script>
 
 <template>
-  <n-modal :show="show" @update:show="(v) => emit('update:show', v)" preset="card" title="上传文件" style="width: 500px">
+  <n-modal
+    :show="show"
+    @update:show="v => emit('update:show', v)"
+    preset="card"
+    title="上传文件"
+    style="width: 500px"
+  >
     <n-space vertical style="width: 100%">
       <n-form-item label="选择文件">
-        <n-upload
-          :show-file-list="true"
-          :custom-request="handleModalUpload"
-          multiple
-          :max="10"
-        >
+        <n-upload :show-file-list="true" :custom-request="handleModalUpload" multiple :max="10">
           <n-button>选择文件</n-button>
         </n-upload>
       </n-form-item>

@@ -14,15 +14,15 @@ interface DropTarget {
 interface Props {
   dropTargets: DropTarget[]
   files: FileRecord[]
-  getFilesInTarget: (target: DropTarget) => FileRecord[]
-  isDragOver: (targetId: string) => boolean
+  getFilesInTarget: (_target: DropTarget) => FileRecord[]
+  isDragOver: (_targetId: string) => boolean
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  dragOver: [event: DragEvent, targetId: string]
-  dragLeave: [targetId: string]
+  dragOver: [_event: DragEvent, targetId: string]
+  dragLeave: [_targetId: string]
   drop: [event: DragEvent, target: DropTarget]
   delete: [file: FileRecord]
 }>()
@@ -41,9 +41,7 @@ const emit = defineEmits<{
     >
       <div class="drop-header">
         <span class="drop-title">{{ target.name }}</span>
-        <n-tag size="small" type="info">
-          {{ props.getFilesInTarget(target).length }} 个文件
-        </n-tag>
+        <n-tag size="small" type="info"> {{ props.getFilesInTarget(target).length }} 个文件 </n-tag>
       </div>
 
       <div class="drop-area">
@@ -53,22 +51,13 @@ const emit = defineEmits<{
         </div>
 
         <div class="file-list">
-          <div
-            v-for="file in props.getFilesInTarget(target)"
-            :key="file.id"
-            class="file-item"
-          >
+          <div v-for="file in props.getFilesInTarget(target)" :key="file.id" class="file-item">
             <span v-html="Icons.file" class="file-icon"></span>
             <div class="file-info">
               <div class="file-name">{{ file.originalName }}</div>
               <div class="file-meta">{{ formatFileSize(file.size) }}</div>
             </div>
-            <n-button
-              quaternary
-              size="tiny"
-              type="error"
-              @click.stop="emit('delete', file)"
-            >
+            <n-button quaternary size="tiny" type="error" @click.stop="emit('delete', file)">
               <span v-html="Icons.delete" style="width: 14px; height: 14px"></span>
             </n-button>
           </div>

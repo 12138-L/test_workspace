@@ -147,12 +147,15 @@
             </template>
             导出 JSON
           </n-button>
+          <n-button type="success" @click="showEncryptionPanel = true"> 🔐 加密状态 </n-button>
         </n-space>
         <n-alert type="info" title="提示">
           这些工具用于开发调试，生产环境建议移除。重置数据后会重新加载页面以确保状态同步。
         </n-alert>
       </n-space>
     </n-card>
+
+    <EncryptionDebugPanel v-model:show="showEncryptionPanel" />
   </div>
 </template>
 
@@ -169,6 +172,7 @@ import {
   teamRepo
 } from '@/db'
 import { Icons } from '@/config/icons'
+import EncryptionDebugPanel from '@/components/EncryptionDebugPanel.vue'
 
 const settingsStore = useSettingsStore()
 const projectsStore = useProjectsStore()
@@ -180,6 +184,7 @@ const notificationSettings = ref({ ...settingsStore.notification })
 const securitySettings = ref({ ...settingsStore.security })
 
 const dbStats = ref({ projects: 0, tasks: 0, team: 0 })
+const showEncryptionPanel = ref(false)
 
 const languageOptions = [
   { label: '中文', value: 'zh-CN' },

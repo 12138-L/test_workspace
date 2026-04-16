@@ -1,6 +1,7 @@
 export { db, type DBTable } from './schema'
 export * from './repository'
 export * from './migration'
+export * from './encrypted-repository'
 
 import { runMigrationIfNeeded } from './migration'
 import {
@@ -11,6 +12,10 @@ import {
   overtimeRepo,
   adjustmentRepo
 } from './repository'
+import { db as database } from './schema'
+import { createEncryptedRepos } from './encrypted-repository'
+
+export const encryptedRepos = createEncryptedRepos(database)
 
 export async function initDatabase() {
   const migration = await runMigrationIfNeeded()

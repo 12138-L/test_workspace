@@ -14,12 +14,12 @@ export const useTeamStore = defineStore('team', {
   }),
 
   getters: {
-    activeMembers: state => state.list.filter(m => m.status === 'active'),
-    inactiveMembers: state => state.list.filter(m => m.status === 'inactive'),
+    activeMembers: state => state.list.filter(m => m.status === 'active' || (m.status as string) === '在职'),
+    inactiveMembers: state => state.list.filter(m => m.status === 'inactive' || (m.status as string) === '离职'),
     stats: state => ({
       total: state.list.length,
-      active: state.list.filter(m => m.status === 'active').length,
-      inactive: state.list.filter(m => m.status === 'inactive').length
+      active: state.list.filter(m => m.status === 'active' || (m.status as string) === '在职').length,
+      inactive: state.list.filter(m => m.status === 'inactive' || (m.status as string) === '离职').length
     }),
     getByDepartment: state => {
       return (department: string) => state.list.filter(m => m.department === department)

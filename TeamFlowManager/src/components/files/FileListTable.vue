@@ -12,7 +12,7 @@ interface Props {
   loading: boolean
 }
 
-const props = defineProps<Props>()
+const _props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:selectedRowKeys': [keys: (number | string)[]]
@@ -23,13 +23,13 @@ const emit = defineEmits<{
 
 function getCategoryTagType(category: string): string {
   const typeMap: Record<string, string> = {
-    '周报': 'info',
-    '月报': 'primary',
-    '证件': 'warning',
-    '合同': 'success',
-    '报告': 'error',
-    '考勤': 'default',
-    '其他': 'info'
+    周报: 'info',
+    月报: 'primary',
+    证件: 'warning',
+    合同: 'success',
+    报告: 'error',
+    考勤: 'default',
+    其他: 'info'
   }
   return typeMap[category] || 'default'
 }
@@ -44,15 +44,21 @@ const columns: DataTableColumns<FileRecord> = [
     key: 'originalName',
     ellipsis: { tooltip: true },
     minWidth: 180,
-    render: row => h('div', { class: 'file-name-cell', title: row.originalName }, [
-      h('span', { class: 'file-name-text' }, row.originalName)
-    ])
+    render: row =>
+      h('div', { class: 'file-name-cell', title: row.originalName }, [
+        h('span', { class: 'file-name-text' }, row.originalName)
+      ])
   },
   {
     title: '分类',
     key: 'category',
     width: 90,
-    render: row => h('n-tag', { type: getCategoryTagType(row.category), size: 'small', round: true }, { default: () => row.category })
+    render: row =>
+      h(
+        'n-tag',
+        { type: getCategoryTagType(row.category), size: 'small', round: true },
+        { default: () => row.category }
+      )
   },
   {
     title: '关联人员',
@@ -84,35 +90,63 @@ const columns: DataTableColumns<FileRecord> = [
     key: 'actions',
     width: 110,
     fixed: 'right',
-    render: (row: FileRecord) => h('div', { class: 'table-actions' }, [
-      h(NButton, {
-        size: 'tiny',
-        quaternary: true,
-        onClick: () => emit('download', row),
-        title: '下载',
-        style: { color: '#18a058' }
-      }, {
-        icon: () => h('span', { innerHTML: Icons.download, style: 'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;' })
-      }),
-      h(NButton, {
-        size: 'tiny',
-        quaternary: true,
-        onClick: () => emit('edit', row),
-        title: '编辑',
-        style: { color: '#2080f0' }
-      }, {
-        icon: () => h('span', { innerHTML: Icons.edit, style: 'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;' })
-      }),
-      h(NButton, {
-        size: 'tiny',
-        quaternary: true,
-        onClick: () => emit('delete', row),
-        title: '删除',
-        style: { color: '#d03050' }
-      }, {
-        icon: () => h('span', { innerHTML: Icons.delete, style: 'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;' })
-      })
-    ])
+    render: (row: FileRecord) =>
+      h('div', { class: 'table-actions' }, [
+        h(
+          NButton,
+          {
+            size: 'tiny',
+            quaternary: true,
+            onClick: () => emit('download', row),
+            title: '下载',
+            style: { color: '#18a058' }
+          },
+          {
+            icon: () =>
+              h('span', {
+                innerHTML: Icons.download,
+                style:
+                  'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;'
+              })
+          }
+        ),
+        h(
+          NButton,
+          {
+            size: 'tiny',
+            quaternary: true,
+            onClick: () => emit('edit', row),
+            title: '编辑',
+            style: { color: '#2080f0' }
+          },
+          {
+            icon: () =>
+              h('span', {
+                innerHTML: Icons.edit,
+                style:
+                  'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;'
+              })
+          }
+        ),
+        h(
+          NButton,
+          {
+            size: 'tiny',
+            quaternary: true,
+            onClick: () => emit('delete', row),
+            title: '删除',
+            style: { color: '#d03050' }
+          },
+          {
+            icon: () =>
+              h('span', {
+                innerHTML: Icons.delete,
+                style:
+                  'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;'
+              })
+          }
+        )
+      ])
   }
 ]
 
@@ -125,7 +159,7 @@ const pagination = {
   <n-spin :show="loading" description="加载中...">
     <n-data-table
       :checked-row-keys="selectedRowKeys"
-      @update:checked-row-keys="(keys) => emit('update:selectedRowKeys', keys)"
+      @update:checked-row-keys="keys => emit('update:selectedRowKeys', keys)"
       :row-key="(row: FileRecord) => row.id"
       :columns="columns"
       :data="files"
@@ -133,10 +167,7 @@ const pagination = {
       :max-height="380"
     >
       <template #empty>
-        <DataTableEmpty
-          title="暂无文件"
-          description="拖拽文件到上方区域或点击上传按钮"
-        />
+        <DataTableEmpty title="暂无文件" description="拖拽文件到上方区域或点击上传按钮" />
       </template>
     </n-data-table>
   </n-spin>

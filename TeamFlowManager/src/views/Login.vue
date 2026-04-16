@@ -1,13 +1,12 @@
 <template>
+  <!-- 登录页面主容器 - 全屏居中布局 -->
   <div class="login-container">
-    <div class="login-background">
-      <div class="background-bubble"></div>
-      <div class="background-bubble"></div>
-      <div class="background-bubble"></div>
-      <div class="background-bubble"></div>
-    </div>
+    <!-- 背景层 - 抽离的可复用组件 -->
+    <LoginBackground />
 
-    <n-card class="login-form" bordered>
+    <!-- 登录卡片 - NaiveUI的Card组件 -->
+    <n-card class="login-form-card" bordered>
+      <!-- 头部Logo区域 -->
       <div class="login-header">
         <div class="logo-icon">
           <span v-html="Icons.team"></span>
@@ -16,114 +15,72 @@
         <p class="logo-desc">高效团队管理 · 本地优先 · 数据安全</p>
       </div>
 
-      <n-form
+      <!-- 登录表单组件 - 抽离的交互组件 -->
+      <LoginFormComponent
         ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
-        size="large"
-        class="login-form-inner"
-      >
-        <n-form-item path="username">
-          <n-input
-            v-model:value="loginForm.username"
-            placeholder="用户名"
-            clearable
-            :disabled="loading"
-            @keyup.enter="handleLogin"
-          >
-            <template #prefix>
-              <span v-html="Icons.user" class="input-icon"></span>
-            </template>
-          </n-input>
-        </n-form-item>
+        v-model="loginForm"
+        :loading="loading"
+        @submit="handleLogin"
+      />
 
-        <n-form-item path="password">
-          <n-input
-            v-model:value="loginForm.password"
-            type="password"
-            placeholder="密码"
-            show-password-on="click"
-            :disabled="loading"
-            @keyup.enter="handleLogin"
-          >
-            <template #prefix>
-              <span v-html="Icons.lock" class="input-icon"></span>
-            </template>
-          </n-input>
-        </n-form-item>
-
-        <div class="login-options">
-          <n-checkbox v-model:checked="loginForm.remember" :disabled="loading">
-            记住密码
-          </n-checkbox>
-          <n-text class="forgot-password" type="primary"> 忘记密码? </n-text>
-        </div>
-
-        <n-form-item>
-          <n-button type="primary" block size="large" :loading="loading" @click="handleLogin">
-            {{ loading ? '正在登录...' : '登 录' }}
-          </n-button>
-        </n-form-item>
-      </n-form>
-
+      <!-- 底部快捷操作区 -->
       <div class="login-footer">
         <p>输入任意用户名密码即可体验</p>
-        <n-button text type="primary" size="small" @click="quickLogin"> 一键快速登录 </n-button>
+        <n-button text type="primary" size="small" @click="quickLogin" :disabled="loading">
+          一键快速登录
+        </n-button>
       </div>
     </n-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { FormRules } from 'naive-ui'
+/**
+ * Login - 登录页面容器组件
+ *
+ * 【架构升级 - Composable 模式】
+ * 业务逻辑进一步抽离到 useLogin composable:
+ *
+ * Login.vue (视图层)
+ *     ↓  只负责: 组件组装 + 布局 + 子组件通信
+ * useLogin.ts (业务层)
+ *     ↓  负责: 流程控制 + 状态管理 + Store集成
+ * usePasswordStrength.ts (领域逻辑)
+ *     ↓  负责: 纯算法 + 可复用
+ * storage.ts (基础设施)
+ *        负责: 数据持久化 + 安全编码
+ */
+
 import { message } from '@/utils/naive'
-import type { LoginForm } from '@/types'
 import { useUserStore } from '@/stores/user'
 import { Icons } from '@/config/icons'
+import LoginBackground from '@/components/login/LoginBackground.vue'
+import LoginFormComponent from '@/components/login/LoginForm.vue'
+import { useLogin } from '@/composables/useLogin'
 
 const userStore = useUserStore()
-const loginFormRef = ref()
-const loading = ref(false)
 
-const loginForm = reactive<LoginForm>({
-  username: '',
-  password: '',
-  remember: false
+/**
+ * 业务逻辑全部委托给 useLogin composable
+ * 这里只需要组装和连接
+ */
+const { loginFormRef, loading, loginForm, handleLogin, quickLogin } = useLogin(userStore, message)
+
+/**
+ * 【重要】修复类型一致性
+ * 将 useLogin 返回的泛型引用 转换为 具体的组件实例类型
+ * 这样父组件调用 validate() 时获得完整类型安全
+ */
+defineExpose({
+  loginFormRef: loginFormRef as Ref<{ validate: () => Promise<void> } | null>
 })
-
-const loginRules: FormRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 3, message: '密码长度至少3位', trigger: 'blur' }
-  ]
-}
-
-const handleLogin = async () => {
-  if (!loginFormRef.value || loading.value) return
-
-  try {
-    await loginFormRef.value.validate()
-    loading.value = true
-
-    await userStore.login(loginForm)
-  } catch (error) {
-    if (error && typeof error === 'object' && 'errors' in error) {
-      message.warning('请填写完整的登录信息')
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-const quickLogin = () => {
-  loginForm.username = 'admin'
-  loginForm.password = '123456'
-  handleLogin()
-}
 </script>
 
 <style scoped>
+/**
+ * 登录页面容器
+ * Flex实现完美居中，渐变色背景动画
+ */
 .login-container {
   height: 100vh;
   display: flex;
@@ -136,52 +93,10 @@ const quickLogin = () => {
   overflow: hidden;
 }
 
-.login-background {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.background-bubble {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  animation: float 6s ease-in-out infinite;
-}
-
-.background-bubble:nth-child(1) {
-  width: 300px;
-  height: 300px;
-  top: -100px;
-  left: -100px;
-  animation-delay: 0s;
-}
-
-.background-bubble:nth-child(2) {
-  width: 200px;
-  height: 200px;
-  bottom: -50px;
-  right: -50px;
-  animation-delay: 2s;
-}
-
-.background-bubble:nth-child(3) {
-  width: 150px;
-  height: 150px;
-  top: 50%;
-  right: 10%;
-  animation-delay: 4s;
-}
-
-.background-bubble:nth-child(4) {
-  width: 100px;
-  height: 100px;
-  bottom: 30%;
-  left: 15%;
-  animation-delay: 1s;
-}
-
+/**
+ * 渐变背景流动动画
+ * 400%背景尺寸 + 关键帧位移 = 丝滑流动感
+ */
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
@@ -194,23 +109,28 @@ const quickLogin = () => {
   }
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-20px) rotate(5deg);
-  }
-}
-
-.login-form {
+/**
+ * 登录卡片样式
+ * backdrop-filter 毛玻璃效果是现代UI的点睛之笔
+ */
+.login-form-card {
   width: 400px;
   z-index: 10;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
+.login-form-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.2);
+}
+
+/**
+ * Logo头部区域
+ */
 .login-header {
   text-align: center;
   margin-bottom: 36px;
@@ -235,13 +155,6 @@ const quickLogin = () => {
   height: 36px;
 }
 
-.input-icon {
-  display: flex;
-  width: 18px;
-  height: 18px;
-  color: #8c9aa8;
-}
-
 .logo-text {
   font-size: 24px;
   font-weight: 600;
@@ -255,22 +168,9 @@ const quickLogin = () => {
   margin: 0;
 }
 
-.login-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.forgot-password {
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.forgot-password:hover {
-  opacity: 0.8;
-}
-
+/**
+ * 底部区域
+ */
 .login-footer {
   text-align: center;
   margin-top: 24px;
@@ -282,5 +182,57 @@ const quickLogin = () => {
   color: #8c9aa8;
   font-size: 13px;
   margin: 0 0 8px 0;
+}
+
+/**
+ * 错落入场动画
+ * 卡片 -> 头部 -> 表单 -> 底部
+ * 0.1秒延迟创造呼吸感
+ */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-form-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.login-header {
+  animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+.login-footer {
+  animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+/**
+ * 移动端响应式适配
+ * 宽度自适应，缩小内边距和Logo尺寸
+ */
+@media (max-width: 480px) {
+  .login-form-card {
+    width: 92vw;
+    margin: 0 16px;
+  }
+
+  .login-header {
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+  }
 }
 </style>

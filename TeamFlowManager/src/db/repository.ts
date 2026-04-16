@@ -1,5 +1,6 @@
 import type { Table } from 'dexie'
 import { db } from './schema'
+import { logger } from '@/utils/logger'
 import type {
   Project,
   Task,
@@ -31,7 +32,7 @@ function safeSerialize<T>(obj: T): T {
   try {
     return toPlainObject(obj)
   } catch (e) {
-    console.warn('[Dexie] Serialization fallback, some data may be lost:', e)
+    logger.warn('[Dexie] Serialization fallback, some data may be lost:', e)
     return { ...obj } as T
   }
 }
@@ -43,7 +44,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       return this._table.toArray()
     } catch (e) {
-      console.error('[Dexie] getAll error:', e)
+      logger.error('[Dexie] getAll error:', e)
       return []
     }
   }
@@ -52,7 +53,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       return this._table.get(id)
     } catch (e) {
-      console.error('[Dexie] getById error:', e)
+      logger.error('[Dexie] getById error:', e)
       return undefined
     }
   }
@@ -61,7 +62,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       return this._table.add(safeSerialize(item) as T) as Promise<K>
     } catch (e) {
-      console.error('[Dexie] create error:', e)
+      logger.error('[Dexie] create error:', e)
       throw e
     }
   }
@@ -70,7 +71,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       return this._table.update(id, safeSerialize(changes) as any)
     } catch (e) {
-      console.error('[Dexie] update error:', e)
+      logger.error('[Dexie] update error:', e)
       throw e
     }
   }
@@ -79,7 +80,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       await this._table.delete(id)
     } catch (e) {
-      console.error('[Dexie] delete error:', e)
+      logger.error('[Dexie] delete error:', e)
       throw e
     }
   }
@@ -91,7 +92,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
         { allKeys: true }
       ) as Promise<K[]>
     } catch (e) {
-      console.error('[Dexie] bulkCreate error:', e)
+      logger.error('[Dexie] bulkCreate error:', e)
       throw e
     }
   }
@@ -100,7 +101,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       await this._table.clear()
     } catch (e) {
-      console.error('[Dexie] clear error:', e)
+      logger.error('[Dexie] clear error:', e)
       throw e
     }
   }
@@ -109,7 +110,7 @@ export class DexieRepository<T, K = number> implements IRepository<T, K> {
     try {
       return this._table.count()
     } catch (e) {
-      console.error('[Dexie] count error:', e)
+      logger.error('[Dexie] count error:', e)
       return 0
     }
   }
@@ -129,13 +130,11 @@ export const fileRepo = new DexieRepository<FileRecord, number>(db.files)
 export const fileDB = {
   getAllFiles: () => fileRepo.getAll(),
   addFile: (record: Omit<FileRecord, 'id' | 'createdAt'>) =>
-    fileRepo.create({ ...record, createdAt: Date.now() } as FileRecord),
+    fileRepo.create({ ...record, createdAt: Date.now() }),
   updateFile: (id: number, changes: Partial<FileRecord>) => fileRepo.update(id, changes),
   deleteFile: (id: number) => fileRepo.delete(id),
-  getFilesByCategory: (category: string) =>
-    db.files.where('category').equals(category).toArray(),
-  getFilesByMember: (memberId: number) =>
-    db.files.where('memberId').equals(memberId).toArray()
+  getFilesByCategory: (category: string) => db.files.where('category').equals(category).toArray(),
+  getFilesByMember: (memberId: number) => db.files.where('memberId').equals(memberId).toArray()
 }
 
 export const calendarDB = {

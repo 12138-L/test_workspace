@@ -5,6 +5,7 @@ import App from './App.vue'
 import './styles/tailwind.css'
 import './styles/icons.css'
 import { setupNaiveDiscreteApi } from './utils/naive'
+import { setupErrorHandler } from './utils/errorHandler'
 import { initDatabase } from './db'
 import {
   useUserStore,
@@ -44,6 +45,7 @@ async function bootstrap() {
     console.warn('DB init failed, using fallback:', e)
   }
 
+  setupErrorHandler(app)
   app.mount('#app')
   setupNaiveDiscreteApi()
 }

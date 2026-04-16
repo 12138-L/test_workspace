@@ -79,140 +79,62 @@
       </n-spin>
     </n-card>
 
-    <n-modal
+    <TaskForm
       v-model:show="showModal"
-      preset="card"
-      :title="editingTask ? '编辑任务' : '新建任务'"
-      style="width: 500px"
-    >
-      <n-form :model="formData" label-placement="left" label-width="100">
-        <n-form-item label="任务标题" required>
-          <n-input v-model:value="formData.title" placeholder="请输入任务标题" />
-        </n-form-item>
-        <n-form-item label="任务内容">
-          <n-input
-            v-model:value="formData.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入任务详情描述"
-          />
-        </n-form-item>
-        <n-form-item label="备注">
-          <n-input
-            v-model:value="formData.remark"
-            type="textarea"
-            :rows="2"
-            placeholder="添加备注信息"
-          />
-        </n-form-item>
-        <n-form-item label="负责人">
-          <n-input v-model:value="formData.assignee" placeholder="请输入负责人" />
-        </n-form-item>
-        <n-form-item label="优先级">
-          <n-select v-model:value="formData.priority" :options="priorityOptions" />
-        </n-form-item>
-        <n-form-item label="状态">
-          <n-select v-model:value="formData.status" :options="statusOptions" />
-        </n-form-item>
-        <n-form-item label="开始日期">
-          <n-date-picker
-            v-model:value="formData.startTime as any"
-            type="date"
-            format="yyyy-MM-dd"
-            value-format="timestamp"
-            style="width: 100%"
-          />
-        </n-form-item>
-        <n-form-item label="截止日期">
-          <n-date-picker
-            v-model:value="formData.dueDate as any"
-            type="date"
-            format="yyyy-MM-dd"
-            value-format="timestamp"
-            style="width: 100%"
-          />
-        </n-form-item>
-      </n-form>
-
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showModal = false" :disabled="submitting">取消</n-button>
-          <n-button type="primary" @click="handleSubmit" :loading="submitting">确定</n-button>
-        </n-space>
-      </template>
-    </n-modal>
+      :editing="!!editingTask"
+      :form-data="formData"
+      :loading="submitting"
+      :priority-options="priorityOptions"
+      :status-options="statusOptions"
+      @submit="handleSubmit"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { DataTableColumns, SelectOption } from 'naive-ui'
-import { h, ref, onMounted, watch } from 'vue'
-import { message, dialog } from '@/utils/naive'
+/**
+ * Tasks - 任务管理页面
+ *
+ * 【最终架构】
+ * Tasks.vue                     ← 你在这：视图层 - 只负责布局
+ *     ↓
+ * TaskForm/KanbanBoard          ← 通用UI组件
+ *     ↓
+ * useTasks.ts                   ← 业务逻辑层 - CRUD + 防抖 + 表单
+ */
+
+import type { DataTableColumns } from 'naive-ui'
+import { h, onMounted } from 'vue'
+import { dialog } from '@/utils/naive'
 import type { Task } from '@/types'
 import { useTasksStore } from '@/stores/tasks'
 import { getStatusType, getPriorityType } from '@/utils/formatters'
 import { Icons } from '@/config/icons'
+import { useTasks } from '@/composables/useTasks'
 import DataTableActions from '@/components/DataTableActions.vue'
 import DataTableEmpty from '@/components/DataTableEmpty.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
-
-function debounce<T extends (..._args: any[]) => any>(fn: T, delay: number) {
-  let timer: number
-  return (...args: Parameters<T>) => {
-    clearTimeout(timer)
-    timer = window.setTimeout(() => fn(...args), delay)
-  }
-}
+import TaskForm from '@/components/tasks/TaskForm.vue'
 
 const tasksStore = useTasksStore()
 
-const viewMode = ref<'list' | 'kanban'>('kanban')
-const showModal = ref(false)
-const editingTask = ref<Task | null>(null)
-const localSearch = ref('')
-const submitting = ref(false)
-
-const defaultFormData = {
-  title: '',
-  description: '',
-  remark: '',
-  assignee: '',
-  priority: '中' as Task['priority'],
-  status: '待开始' as Task['status'],
-  startTime: null as number | null,
-  dueDate: null as number | null
-}
-
-const formData = ref({ ...defaultFormData })
-
-function resetForm() {
-  editingTask.value = null
-  formData.value = { ...defaultFormData }
-}
-
-const pagination = {
-  pageSize: 10
-}
-
-const filterOptions: SelectOption[] = [
-  { label: '待开始', value: '待开始' },
-  { label: '进行中', value: '进行中' },
-  { label: '已完成', value: '已完成' },
-  { label: '已延期', value: '已延期' }
-]
-
-const statusOptions = [
-  { label: '待开始', value: '待开始' },
-  { label: '进行中', value: '进行中' },
-  { label: '已完成', value: '已完成' },
-  { label: '已延期', value: '已延期' }
-]
-
-const priorityOptions = [
-  { label: '高', value: '高' },
-  { label: '中', value: '中' },
-  { label: '低', value: '低' }
-]
+const {
+  viewMode,
+  showModal,
+  editingTask,
+  localSearch,
+  submitting,
+  formData,
+  pagination,
+  filterOptions,
+  statusOptions,
+  priorityOptions,
+  handleCreateTask,
+  handleEdit,
+  handleDelete,
+  handleStatusChange,
+  handleSubmit
+} = useTasks({ tasks: tasksStore })
 
 const columns: DataTableColumns<Task> = [
   {
@@ -287,158 +209,73 @@ const columns: DataTableColumns<Task> = [
     render: (row: Task) =>
       h(DataTableActions, {
         onEdit: () => handleEdit(row),
-        onDelete: () => handleDelete(row)
+        onDelete: () => {
+          dialog.warning({
+            title: '确认删除',
+            content: `确定要删除任务「${row.title}」吗？`,
+            positiveText: '删除',
+            negativeText: '取消',
+            onPositiveClick: async () => {
+              await handleDelete(row)
+            }
+          })
+        }
       })
   }
 ]
 
-function handleCreateTask() {
-  resetForm()
-  showModal.value = true
-}
-
-function parseDateString(dateStr: string): number | null {
-  if (!dateStr) return null
-  const date = new Date(dateStr)
-  return isNaN(date.getTime()) ? null : date.getTime()
-}
-
-function formatTimestamp(timestamp: number | null): string {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function handleEdit(task: Task) {
-  editingTask.value = task
-  formData.value = {
-    title: task.title,
-    description: task.description || '',
-    remark: task.remark || '',
-    assignee: task.assignee,
-    priority: task.priority,
-    status: task.status,
-    startTime: parseDateString(task.startTime),
-    dueDate: parseDateString(task.dueDate)
-  }
-  showModal.value = true
-}
-
-function handleDelete(task: Task) {
-  dialog.warning({
-    title: '确认删除',
-    content: `确定要删除任务「${task.title}」吗？`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      await tasksStore.deleteTask(task.id)
-      message.success('已删除')
-    }
-  })
-}
-
-async function handleStatusChange(taskId: number, newStatus: Task['status']) {
-  await tasksStore.updateTask(taskId, { status: newStatus })
-  message.success('任务状态已更新')
-}
-
-async function handleSubmit() {
-  if (submitting.value) return
-
-  const title = formData.value.title?.trim()
-  if (!title) {
-    message.warning('请输入任务标题')
-    return
-  }
-
-  submitting.value = true
-  try {
-    const submitData = {
-      ...formData.value,
-      title,
-      description: formData.value.description?.trim() || '',
-      remark: formData.value.remark?.trim() || '',
-      assignee: formData.value.assignee?.trim() || '',
-      startTime: formatTimestamp(formData.value.startTime as number | null),
-      dueDate: formatTimestamp(formData.value.dueDate as number | null)
-    }
-
-    if (editingTask.value) {
-      await tasksStore.updateTask(editingTask.value.id, submitData)
-      message.success('任务已更新')
-    } else {
-      await tasksStore.addTask(submitData)
-      message.success('任务创建成功')
-    }
-
-    showModal.value = false
-  } finally {
-    submitting.value = false
-  }
-}
-
 onMounted(() => {
   tasksStore.fetchTasks()
-  localSearch.value = tasksStore.searchKeyword
-})
-
-const setSearchDebounced = debounce((value: string) => {
-  tasksStore.setSearchKeyword(value)
-}, 300)
-
-watch(localSearch, value => {
-  setSearchDebounced(value)
-})
-
-watch(showModal, open => {
-  if (!open) {
-    resetForm()
-  }
 })
 </script>
 
 <style scoped>
-.tasks-container {
-  padding: 0;
-}
-
 .card-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
 .kanban-wrapper {
-  padding: 8px 0;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .task-info-cell {
-  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.task-info-cell .task-title {
-  font-weight: 500;
-  color: #1d2129;
-  margin-bottom: 2px;
-}
-
-.task-info-cell .task-desc {
-  font-size: 12px;
-  color: #86909c;
+.task-title {
+  font-weight: 600;
+  color: #333647;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 260px;
+}
+
+.task-desc {
+  font-size: 12px;
+  color: #8c9aa8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
 }
 
 .remark-text {
   cursor: help;
-  color: #4e5969;
 }
 
 .empty-text {
-  color: #c9cdd4;
+  color: #8c9aa8;
+}
+
+.icon-btn {
+  display: flex;
+  width: 16px;
+  height: 16px;
 }
 </style>
